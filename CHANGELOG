@@ -1,0 +1,20 @@
+phptidy Changelog
+
+Version 2.7 (2008-04-11)
+- @see-Tags for dynamic includes
+- Add blank lines before and after functions and classes
+- Heredoc syntax
+- Bugfix: Do not indent T_ENCAPSED_AND_WHITESPACE
+- Bugfix: Handling of returning a reference from a function
+
+Version 2.6 (2007-12-04)
+- Configurable PHP Open Tags
+- Project files excludes
+- Use array_splice() to replace code
+- Progress bar
+
+Version 2.5 (2007-06-13)
+- First public release
+- All inline comments in english
+- Cache
+
