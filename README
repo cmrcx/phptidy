@@ -1,0 +1,151 @@
+phptidy README
+
+
+=== Description ===
+
+This is a little tool for formatting PHP code. It aims to make the code better
+readable and thus better understandable.
+
+Unlike other beautifiers, phptidy does not completely reformat the code and
+remove formatting, which was intended by the author. It only touches things
+which are usually not intended. In case of doubt, phptidy will not touch
+anything. Because of this strategy it is also very unlikely, that phptidy by
+fault changes the functionality of the code.
+
+phptidy is useful in many situations:
+
+- You can use it on your own code during development to keep the code tidy,
+  wasting no time on indenting and formatting by hand.
+
+- In a project with more than one person coding you have less trouble with
+  people who do not confirm to the style guide.
+
+- If you use a version control system you can require all participating people
+  to run phptidy before committing changes. Then you won't have anymore trouble
+  with unintended changes due to code formatting or with the trailing
+  whitespace or wrong line breaks of some brain dead editors (or their users).
+
+- If you have to maintain some ultimately ugly code of someone else. After
+  running phptidy the code will be much better readable. Well, the code will
+  not be perfect, but it's a big help anyway.
+
+The used coding standard is mainly inspired by the PEAR Coding Standards:
+http://pear.php.net/manual/en/standards.php
+
+phptidy is released under the GPL and can be used for free.
+
+
+=== System Requirements ===
+
+- PHP 5
+    phptidy does not work on PHP 4, because some functions introduced in PHP 5
+    are used, and there are also some differences in the tokens. But it should
+    be not too difficult to port it to PHP 4.
+
+- PHP CLI SAPI
+    http://php.net/manual/en/features.commandline.php
+    phptidy expects PHP in /usr/bin/php. If your PHP executable is in a
+    different path, you will have to edit the first line of phptidy.php.
+
+- PHP extension: Tokenizer
+    http://php.net/manual/en/book.tokenizer.php
+
+- A Unix-like system (Linux, MacOS X, BSD, ...)
+    It may run on other operating systems, but I've never tried.
+
+ Optional:
+
+- diff
+    The standard Unix diff utility
+    Only required if you want to use phptidy's "diff" command.
+
+- PHP extension: mbstring
+    http://php.net/manual/en/book.tokenizer.php
+    Only required if you want to use the configration variable $encoding to
+    check the encoding of your PHP files.
+
+
+=== Installation ===
+
+phptidy consists of only one file, phptidy.php. Execute this file on command
+line to use it.
+
+  $ ./phptidy.php
+
+There is actually no need to install phptidy, you can run it also with the path
+to the file on command line.
+
+  $ ~/src/phptidy/phptidy.php
+
+To be able to call phptidy without having to supply the path, you can copy
+phptidy.php to a directory in your PATH, e.g. ~/bin (only for you)
+
+  $ cp phptidy.php ~/bin
+
+or /usr/local/bin (for all users).
+
+  # cp phptidy.php /usr/local/bin
+
+In the following examples I assume you have installed phptidy in your PATH.
+
+
+=== Basic usage ===
+
+The most simple case: You have a PHP script example.php and you want to tidy it
+up.
+
+  $ phptidy.php suffix example.php
+
+phptidy will create a file "example.php.phptidy.php" with the tidy version of
+your script.
+
+To see what changes phptidy would make to your script, you can use phptidy's
+"diff" command:
+
+  $ phptidy.php diff example.php
+
+If you are happy with the displayed changes, can now overwrite the original
+file with the tidy version by using the "replace" command:
+
+  $ phptidy.php replace example.php
+
+You will find a backup of the original version of the file in the hidden file
+".example.php.phptidybak~".
+
+If you have a project consisting of multiple files, you can supply all these
+files as arguments:
+
+  $ phptidy.php replace *.php inc/*.php
+
+
+=== Using config files ===
+
+If you have a project with many files you can write the list of files in a
+config file. Then you do not have to supply the list on the command line
+anymore. The config file has to be named ".phptidy-config.php" and has to be in
+the project's top level directory. To have the same effect as in the last
+example the config file would have to have the following content:
+
+  <?php
+  $project_files = array("*.php", "inc/*.php");
+
+Then you can call phptidy without the files list:
+
+  $ phptidy replace
+
+Please notice that when using config files, you always have to call phptidy
+from the project's top level directory where also the config file resides.
+Otherwise phptidy won't be able to find the config file.
+
+With a config file you can also adjust phptidy's default settings to the
+specific requirements of your project. See the phptidy source comments for a
+list of available variables and their default settings.
+
+
+=== Perspective ===
+
+Don't hesitate to write me about your experiences with phptidy. Write me which
+features you miss, what did not work for you, or just that it works fine. I
+hope phptidy helps you with your projects as much as it helps me!
+
+Magnus Rosenbaum <phptidy@cmr.cx>

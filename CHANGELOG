@@ -1,5 +1,22 @@
 phptidy Changelog
 
+Version 2.8 (2008-05-22)
+- README
+- Display of a usage message
+- Better error messages and correct return codes
+- Check for required environment
+- Empty default author to avoid, that my name is beeing written in scripts by
+  accident
+- Bugfix: Removing brackets from statements
+- Remove round brackets also from "break", "continue" and "echo"
+- Performance optimisations
+- Strip new token index [2]
+- Indenting support for more operators
+- Changed default configuration for $open_tag to "<?php" to make it work in
+  systems without short tags enabled
+- Check encoding
+- Colored diff output
+
 Version 2.7 (2008-04-11)
 - @see-Tags for dynamic includes
 - Add blank lines before and after functions and classes
@@ -17,4 +34,3 @@ Version 2.5 (2007-06-13)
 - First public release
 - All inline comments in english
 - Cache
-

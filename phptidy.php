@@ -1,47 +1,13 @@
 #!/usr/bin/php
-<?
+<?php
 /**
  * phptidy
  *
- * This tool formats the code of PHP scripts, to make them better readable. The
- * used coding standard is mainly inspired by the PEAR Coding Standards.
- *
- * Usage: phptidy.php command [files]
- *
- * Commands:
- *   suffix   Write output into files with suffix .phptidy.php
- *   replace  Replace files and backup original as .phptidybak
- *   tokens   Show source file tokens
- *   diff     Show diff between old and new source
- *   files    Show files that would be processed
- *
- * If no files are supplied on command line, they will be read from the config
- * file.
- *
- * Example for the optional config file '.phptidy-config.php' in the project
- * directory:
- * <code>
- * <?
- * $project_files = array("*.php");
- * $default_author = "Magnus Rosenbaum <phptidy@cmr.cx>";
- * ?>
- * </code>
- *
- * If you supply the config file, the only variable you must set is
- * $project_files. All other variables are optional and have a default value
- * if you omit them. See the default configuration section below for a list of
- * all possible configuration settings.
+ * See README for more information.
  *
  * PHP version >= 5.0
  *
- * @todo class DocBlocks
- * @todo repair DocTags
- * @todo check see-Tags
- * @todo make the resulting format more configurable
- * @todo check/convert encoding
- * @todo insert doctags in the right order into the existing ones
- *
- * @copyright 2003-2007 Magnus Rosenbaum
+ * @copyright 2003-2008 Magnus Rosenbaum
  * @license   GPL v2
  *
  * This program is free software; you can redistribute it and/or
@@ -58,45 +24,130 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * @version 2.7 (2008-04-11)
+ * @version 2.8 (2008-05-22)
  * @author  Magnus Rosenbaum <phptidy@cmr.cx>
  * @package phptidy
  */
 
 
-error_reporting(E_ALL);
+//////////////// DEFAULT CONFIGURATION ///////////////////
 
-
-// Default configuration
 // You can overwrite all these settings in your configuration files.
 
-// Array with the files in your project. Wildcards for glob() may be used.
+// List of files in your project
+// Wildcards for glob() may be used.
 // Example: array("*.php", "inc/*.php");
 $project_files = array();
-// Array with files you want to exclude from the project files
+
+// List of files you want to exclude from the project files
+// Wildcards are not allowed here.
 // Example: array("inc/external_lib.php");
 $project_files_excludes = array();
+
 // The automatically added author in the phpdoc file docblocks
+// If left empty no new @author doctags will be added.
 // Example: "Your Name <you@example.com>"
-$default_author = "Magnus Rosenbaum <phptidy@cmr.cx>";
-// Name of the automatically added package in the phpdoc file docblocks
+$default_author = "";
+
+// Name of the automatically added @package doctag in the phpdoc file docblocks
 // Example: "myproject"
 $default_package = "default";
+
 // String used for indenting
+// If you indent with spaces you can use as much spaces as you like.
 // Useful values: "\t" for indenting with tabs,
 //                "  " for indenting with two spaces
 $indent_char = "\t";
+
 // PHP open tag
+// All php open tags will be replaced by the here defined kind of open tag.
 // Useful values: "<?", "<?php", "<?PHP"
-$open_tag = "<?";
+$open_tag = "<?php";
+
+// Check encoding
+// If left empty the encoding will not be checked.
+// See http://php.net/manual/en/ref.mbstring.html for a list of supported
+// encodings.
+// Examples: "ASCII", "UTF-8", "ISO-8859-1"
+$encoding = "";
+
 // Docroot-Variables
+// phptidy will strip these variables from the beginning of include and require
+// commands to generate appropriate @see tags also for these files.
 // Example: array('$docroot', '$GLOBALS[\'docroot\']');
 $docrootvars = array();
+
+///////////// END OF DEFAULT CONFIGURATION ////////////////
 
 
 define('CONFIGFILE', "./.phptidy-config.php");
 define('CACHEFILE', "./.phptidy-cache");
 
+
+error_reporting(E_ALL);
+
+if (!version_compare(phpversion(), "5.0", ">=")) {
+	echo "Error: phptidy requires PHP 5 or newer.\n";
+	exit(1);
+}
+
+if (php_sapi_name() != "cli") {
+	echo "Error: phptidy has to be run on command line with CLI SAPI\n";
+	exit(1);
+}
+
+
+// Read command line
+$command = "";
+$files = array();
+$options = array();
+foreach ( $_SERVER['argv'] as $key => $value ) {
+	if ($key==0) continue;
+	if ($key==1) {
+		$command = $value;
+		continue;
+	}
+	if (substr($value, 0, 1)=="-") {
+		$options[] = $value;
+	} else {
+		$files[] = $value;
+	}
+}
+
+// Get command
+switch ($command) {
+case "help":
+case "--help":
+case "-h":
+	usage();
+	exit;
+case "suffix":
+case "replace":
+case "diff":
+case "source":
+case "files":
+case "tokens":
+	break;
+default:
+	echo "Unknown command: '".$command."'\n";
+case "":
+	usage();
+	exit(1);
+}
+
+// Get options
+$verbose = false;
+foreach ( $options as $option ) {
+	switch ($option) {
+	case "-v":
+	case "--verbose":
+		$verbose = true;
+		continue 2;
+	}
+	echo "Unknown option: '".$option."'\n";
+	usage();
+	exit(1);
+}
 
 // Load config file
 if ( file_exists(CONFIGFILE) ) {
@@ -106,27 +157,11 @@ if ( file_exists(CONFIGFILE) ) {
 	echo "Running without configuration file\n";
 }
 
-$command = false;
-$files = array();
-
-// Files from command line
-foreach ( $_SERVER['argv'] as $key => $value ) {
-	if ($key==0) continue;
-	if ($key==1) {
-		$command = $value;
-		continue;
-	}
-	$files[] = $value;
-}
-
-if (!in_array($command, array("suffix", "replace", "tokens", "diff", "files"))) {
-	trigger_error("Command is missing", E_USER_ERROR);
-}
-
 // Files from config file
 if (!count($files)) {
 	if (!count($project_files)) {
-		trigger_error("No files supplied on commandline and also no project files specified in config file", E_USER_ERROR);
+		echo "Error: No files supplied on commandline and also no project files specified in config file\n";
+		exit(1);
 	}
 	foreach ( $project_files as $pf ) {
 		$files = array_unique(array_merge($files, glob($pf)));
@@ -140,18 +175,19 @@ foreach ( $project_files_excludes as $file_exclude ) {
 	) unset($files[$key]);
 }
 
-// Ignore backups and results from phptidy
+// Check files
 foreach ( $files as $key => $file ) {
+	// Ignore backups and results from phptidy
 	if (
 		substr($file, -12)==".phptidybak~" or
 		substr($file, -12)==".phptidy.php"
-	) unset($files[$key]);
-}
-
-// Check files
-foreach ( $files as $key => $file ) {
+	) {
+		unset($files[$key]);
+		continue;
+	}
 	if ( !is_readable($file) or !is_file($file) ) {
-		trigger_error("File '".$file."' does not exist or is not readable", E_USER_ERROR);
+		echo "Error: File '".$file."' does not exist or is not readable\n";
+		exit(1);
 	}
 }
 
@@ -196,6 +232,11 @@ if ( isset($cache['functions_seetags']) and $md5sum == $cache['functions_seetags
 	$cache['functions_seetags'] = $md5sum;
 }
 
+if ( !extension_loaded("tokenizer") ) {
+	echo "Error: The 'Tokenizer' extension for PHP is missing. See http://php.net/manual/en/book.tokenizer.php for more information.\n";
+	exit(1);
+}
+
 echo "Process files\n";
 $replaced = 0;
 foreach ( $files as $file ) {
@@ -207,12 +248,20 @@ foreach ( $files as $file ) {
 	$md5sum = md5($source_orig);
 	if ( $use_cache and isset($cache['md5sums'][$file]) and $md5sum == $cache['md5sums'][$file] ) {
 		// Original file has not changed, so we don't process it
+		if ($verbose) echo "  File unchanged since last processing.\n";
 		continue;
 	}
 
-	// Backup
-	if ( !copy($file, dirname($file).(dirname($file)?"/":"").".".basename($file).".phptidybak~") ) {
-		trigger_error("The file '".$file."' could not be saved", E_USER_ERROR);
+	// Check encoding
+	if ($encoding and !mb_check_encoding($source_orig, $encoding)) {
+		echo "  File contains characters which are not valid in ".$encoding.":\n";
+		$source_converted = mb_convert_encoding($source_orig, $encoding);
+		$tmpfile = "/tmp/tmp.phptidy.php";
+		if ( !file_put_contents($tmpfile, $source_converted) ) {
+			echo "Error: The temporary file '".$tmpfile."' could not be saved.\n";
+			exit(1);
+		}
+		system("echo -ne '\\033[01;31m'; diff -u ".$file." ".$tmpfile." 2>&1; echo -ne '\\033[00m'");
 	}
 
 	// Process source code
@@ -221,15 +270,16 @@ foreach ( $files as $file ) {
 	do {
 		$source_in = $source;
 		$source = phptidy($source_in);
-		$count++;
+		++$count;
 		if ($count > 3) {
-			echo "Code processed 3 times and still not consistent!\n";
+			echo "  Code processed 3 times and still not consistent!\n";
 			break;
 		}
 	} while ( $source != $source_in );
 
 	// Processing has not changed content of file
 	if ( $count == 1 ) {
+		if ($verbose) echo "  Processed without changes.\n";
 		// Write md5sum of the unchanged file into cache
 		$cache['md5sums'][$file] = $md5sum;
 		continue;
@@ -237,24 +287,49 @@ foreach ( $files as $file ) {
 
 	// Output
 	switch ($command) {
-	case "diff":
-		file_put_contents("/tmp/tmp.phptidy.php", $source);
-		system("diff -u ".$file." /tmp/tmp.phptidy.php 2>&1");
-		break;
-	case "source":
-		echo $source;
+	case "suffix":
+
+		$newfile = $file.".phptidy.php";
+		if ( !file_put_contents($newfile, $source) ) {
+			echo "Error: The file '".$newfile."' could not be saved.\n";
+			exit(1);
+		}
+		echo "  ".$newfile." saved.\n";
+
 		break;
 	case "replace":
-		file_put_contents($file, $source);
+
+		$backupfile = dirname($file).(dirname($file)?"/":"").".".basename($file).".phptidybak~";
+		if ( !copy($file, $backupfile) ) {
+			echo "Error: The file '".$backupfile."' could not be saved.\n";
+			exit(1);
+		}
+		if ( !file_put_contents($file, $source) ) {
+			echo "Error: The file '".$file."' could not be overwritten.\n";
+			exit(1);
+		}
 		echo "  replaced.\n";
-		$replaced++;
+		++$replaced;
+
 		// Write new md5sum into cache
 		$cache['md5sums'][$file] = md5($source);
+
 		break;
-	case "suffix":
-		$newfile = $file.".phptidy.php";
-		file_put_contents($newfile, $source);
-		echo "  ".$newfile." saved.\n";
+	case "diff":
+
+		$tmpfile = "/tmp/tmp.phptidy.php";
+		if ( !file_put_contents($tmpfile, $source) ) {
+			echo "Error: The temporary file '".$tmpfile."' could not be saved.\n";
+			exit(1);
+		}
+		system("echo -ne '\\033[01;34m'; diff -u ".$file." ".$tmpfile." 2>&1; echo -ne '\\033[00m'");
+
+		break;
+	case "source":
+
+		echo $source;
+
+		break;
 	}
 
 }
@@ -265,12 +340,42 @@ if ($command=="replace") {
 	}
 	if ($cache != $cache_orig) {
 		echo "Write cache file ".CACHEFILE."\n";
-		file_put_contents(CACHEFILE, serialize($cache));
+		if ( !file_put_contents(CACHEFILE, serialize($cache)) ) {
+			echo "Warning: The cache file '".CACHEFILE."' could not be saved.\n";
+		}
 	}
 }
 
 
 /////////////////// FUNCTIONS //////////////////////
+
+
+/**
+ * Display usage information
+ */
+function usage() {
+	echo "
+Usage: phptidy.php command [files|options]
+
+Commands:
+  suffix   Write output into files with suffix .phptidy.php
+  replace  Replace files and backup original as .phptidybak
+  diff     Show diff between old and new source
+  source   Show processed source code of affected files
+  files    Show files that would be processed
+  tokens   Show source file tokens
+  help     Display this message
+
+Options:
+  -v       Verbose messages
+
+If no files are supplied on command line, they will be read from the config
+file.
+
+See README and source comments for more information.
+
+";
+}
 
 
 /**
@@ -288,7 +393,7 @@ function phptidy($source) {
 	// Mac line breaks -> Unix line breaks
 	$source = str_replace("\r", "\n", $source);
 
-	$tokens = token_get_all($source);
+	$tokens = get_tokens($source);
 
 	if ($GLOBALS['command']=="tokens") {
 		print_tokens($tokens);
@@ -363,7 +468,7 @@ function token_text($token) {
  * @param array   $tokens
  */
 function print_tokens($tokens) {
-	foreach ($tokens as $token) {
+	foreach ( $tokens as $token ) {
 		if (is_string($token)) {
 			echo $token."\n";
 		} else {
@@ -375,14 +480,29 @@ function print_tokens($tokens) {
 
 
 /**
- * Combine the tokens to the source code
+ * Wrapper for token_get_all(), because there is new mysterious index 2 ...
+ *
+ * @param string  $source
+ * @return array
+ */
+function get_tokens(&$source) {
+	$tokens = token_get_all($source);
+	foreach ( $tokens as &$token ) {
+		if (isset($token[2])) unset($token[2]);
+	}
+	return $tokens;
+}
+
+
+/**
+ * Combines the tokens to the source code
  *
  * @param array   $tokens
  * @return string
  */
 function combine_tokens($tokens) {
 	$out = "";
-	foreach ($tokens as $key => $token) {
+	foreach ( $tokens as $key => $token ) {
 		if (is_string($token)) {
 			$out .= $token;
 		} else {
@@ -394,14 +514,117 @@ function combine_tokens($tokens) {
 
 
 /**
- * Display a possible syntax error
+ * Displays a possible syntax error
  *
  * @param array   $tokens
  * @param integer $key
+ * @param string  $message (optional)
  */
-function possible_syntax_error($tokens, $key) {
-	echo "Possible syntax error detected:\n";
-	echo combine_tokens(array_slice($tokens, max(0, $key-3), 7))."\n";
+function possible_syntax_error($tokens, $key, $message="") {
+	echo "Possible syntax error detected";
+	if ($message) echo " (".$message.")";
+	echo ":\n";
+	echo combine_tokens(array_slice($tokens, max(0, $key-5), 10))."\n";
+}
+
+
+/**
+ * Removes whitespace from the beginning of a token array
+ *
+ * @param array   $tokens
+ */
+function tokens_ltrim(&$tokens) {
+	while (
+		isset($tokens[0][0]) and
+		$tokens[0][0] === T_WHITESPACE
+	) {
+		array_splice($tokens, 0, 1);
+	}
+}
+
+
+/**
+ * Removes whitespace from the end of a token array
+ *
+ * @param array   $tokens (reference)
+ */
+function tokens_rtrim(&$tokens) {
+	while (
+		isset($tokens[$k=count($tokens)-1][0]) and
+		$tokens[$k][0] === T_WHITESPACE
+	) {
+		array_splice($tokens, -1);
+	}
+}
+
+
+/**
+ * Removes all whitespace
+ *
+ * @param array   $tokens (reference)
+ */
+function strip_whitespace(&$tokens) {
+	foreach ( $tokens as $key => $token ) {
+		if (
+			isset($token[0]) and
+			$token[0] === T_WHITESPACE
+		) {
+			unset($tokens[$key]);
+		}
+	}
+	$tokens = array_values($tokens);
+}
+
+
+/**
+ * Gets the argument of a statement
+ *
+ * @param array   $tokens
+ * @param integer $key    Key of the token of the command for which we want the argument
+ * @return array
+ */
+function get_argument_tokens(&$tokens, $key) {
+
+	$tokens_arg = array();
+
+	$round_braces_count = 0;
+	$curly_braces_count = 0;
+
+	++$key;
+	while ( isset($tokens[$key]) ) {
+		$token = &$tokens[$key];
+
+		if (is_string($token)) {
+			if ($token === ";") break;
+		} else {
+			if ($token[0] === T_CLOSE_TAG) break;
+		}
+
+		if       ($token === "(") {
+			++$round_braces_count;
+		} elseif ($token === ")") {
+			--$round_braces_count;
+		} elseif (
+			$token === "{" or (
+				is_array($token) and (
+					$token[0] === T_CURLY_OPEN or
+					$token[0] === T_DOLLAR_OPEN_CURLY_BRACES
+				)
+			)
+		) {
+			++$curly_braces_count;
+		} elseif ($token === "}") {
+			--$curly_braces_count;
+		}
+
+		if ( $round_braces_count < 0 or $round_braces_count < 0 ) break;
+
+		$tokens_arg[] = $token;
+
+		++$key;
+	}
+
+	return $tokens_arg;
 }
 
 
@@ -414,29 +637,22 @@ function possible_syntax_error($tokens, $key) {
  * @param array   $token
  * @return boolean
  */
-function token_is_taboo($token) {
-
-	if (
+function token_is_taboo(&$token) {
+	return (
 		// Do not touch HTML content
-		$token[0]==T_INLINE_HTML or
-		$token[0]==T_CLOSE_TAG or
-		// Do not touch the content of Strings
-		$token[0]==T_CONSTANT_ENCAPSED_STRING or
-		$token[0]==T_ENCAPSED_AND_WHITESPACE
-	) return true;
-
-	// Do not touch the content of Multiline Comments
-	if (
-		$token[0]==T_COMMENT and
-		substr($token[1], 0, 2)=="/*"
-	) return true;
-
-	return false;
+		$token[0] === T_INLINE_HTML or
+		$token[0] === T_CLOSE_TAG or
+		// Do not touch the content of strings
+		$token[0] === T_CONSTANT_ENCAPSED_STRING or
+		$token[0] === T_ENCAPSED_AND_WHITESPACE or
+		// Do not touch the content of multiline comments
+		($token[0] === T_COMMENT and substr($token[1], 0, 2) === "/*")
+	);
 }
 
 
 /**
- * Make commands with Token lowercase
+ * Converts commands to lower case
  *
  * @param array   $tokens (reference)
  */
@@ -509,10 +725,11 @@ function fix_token_case(&$tokens) {
 		T_WHILE
 	);
 
-	foreach ( $tokens as $key => $token ) {
+	foreach ( $tokens as &$token ) {
 		if (is_string($token)) continue;
+		if ($token[1] === strtolower($token[1])) continue;
 		if (in_array($token[0], $lower_case_tokens)) {
-			$tokens[$key][1] = strtolower($token[1]);
+			$token[1] = strtolower($token[1]);
 		}
 	}
 
@@ -520,7 +737,7 @@ function fix_token_case(&$tokens) {
 
 
 /**
- * Make builtin functions lowercase
+ * Converts builtin functions to lower case
  *
  * @param array   $tokens (reference)
  */
@@ -532,24 +749,37 @@ function fix_builtin_functions_case(&$tokens) {
 		$defined_internal_functions = $defined_functions['internal'];
 	}
 
-	foreach ( $tokens as $key => $token ) {
-		if (is_string($token)) continue;
+	foreach ( $tokens as $key => &$token ) {
+
 		if (
-			$token[0] === T_STRING and
-			in_array(strtolower($token[1]), $defined_internal_functions)
+			is_string($token) or
+			$token[0] !== T_STRING or
+			!isset($tokens[$key+2])
+		) continue;
+
+		if (
+			$tokens[$key+1] === "("
+		) {
+			$lowercase = strtolower($token[1]);
+			if (
+				$token[1] !== $lowercase and
+				in_array($lowercase, $defined_internal_functions)
+			) {
+				$token[1] = $lowercase;
+			}
+		} elseif (
+			$tokens[$key+2] === "(" and
+			is_array($tokens[$key+1]) and $tokens[$key+1][0] === T_WHITESPACE
 		) {
 			if (
-				@$tokens[$key+1] === "("
+				in_array(strtolower($token[1]), $defined_internal_functions)
 			) {
-				$tokens[$key][1] = strtolower($tokens[$key][1]);
-			} elseif (
-				@$tokens[$key+1][0] === T_WHITESPACE and
-				@$tokens[$key+2] === "("
-			) {
+				$token[1] = strtolower($token[1]);
+				// Remove whitespace between function name and opening round bracket
 				unset($tokens[$key+1]);
-				$tokens[$key][1] = strtolower($tokens[$key][1]);
 			}
 		}
+
 	}
 
 	$tokens = array_values($tokens);
@@ -557,22 +787,22 @@ function fix_builtin_functions_case(&$tokens) {
 
 
 /**
- * Replace inline tabs
+ * Replaces inline tabs with spaces
  *
  * @param array   $tokens (reference)
  */
 function replace_inline_tabs(&$tokens) {
 
-	foreach ( $tokens as $key => $token ) {
+	foreach ( $tokens as &$token ) {
 
-		if ( is_string($tokens[$key]) ) {
-			$text =& $tokens[$key];
+		if ( is_string($token) ) {
+			$text =& $token;
 		} else {
-			if (token_is_taboo($tokens[$key])) continue;
-			$text =& $tokens[$key][1];
+			if (token_is_taboo($token)) continue;
+			$text =& $token[1];
 		}
 
-		// Replace all tabs by one space
+		// Replace one tab with one space
 		$text = str_replace("\t", " ", $text);
 
 	}
@@ -581,14 +811,13 @@ function replace_inline_tabs(&$tokens) {
 
 
 /**
- * Replace PHP-Open-Tags with consistent Tags
+ * Replaces PHP-Open-Tags with consistent tags
  *
  * @param array   $tokens (reference)
  */
 function replace_phptags(&$tokens) {
 
-	reset($tokens);
-	while ( list($key, $token) = each($tokens) ) {
+	foreach ( $tokens as $key => &$token ) {
 		if (is_string($token)) continue;
 
 		switch ($token[0]) {
@@ -663,7 +892,7 @@ function replace_phptags(&$tokens) {
 
 
 /**
- * Replace shell style comments with C style comments
+ * Replaces shell style comments with C style comments
  *
  * http://pear.php.net/manual/en/standards.comments.php
  *
@@ -671,13 +900,13 @@ function replace_phptags(&$tokens) {
  */
 function replace_shell_comments(&$tokens) {
 
-	foreach ( $tokens as $key => $token ) {
+	foreach ( $tokens as &$token ) {
 		if (is_string($token)) continue;
 		if (
 			$token[0] === T_COMMENT and
 			substr($token[1], 0, 1) === "#"
 		) {
-			$tokens[$key][1] = "//".substr($token[1], 1);
+			$token[1] = "//".substr($token[1], 1);
 		}
 	}
 
@@ -685,7 +914,7 @@ function replace_shell_comments(&$tokens) {
 
 
 /**
- * Enforce statements without brackets
+ * Enforces statements without brackets and fixes whitespace
  *
  * http://pear.php.net/manual/en/standards.including.php
  *
@@ -693,44 +922,70 @@ function replace_shell_comments(&$tokens) {
  */
 function fix_statement_brackets(&$tokens) {
 
-	foreach ( $tokens as $key => $token ) {
-		if (is_string($token)) continue;
+	static $statement_tokens = array(
+		T_INCLUDE,
+		T_INCLUDE_ONCE,
+		T_REQUIRE,
+		T_REQUIRE_ONCE,
+		T_RETURN,
+		T_BREAK,
+		T_CONTINUE,
+		T_ECHO
+	);
 
-		if ( in_array($token[0], array(T_INCLUDE, T_INCLUDE_ONCE, T_REQUIRE, T_REQUIRE_ONCE, T_RETURN) ) ) {
+	foreach ( $tokens as $key => &$token ) {
 
-			$k = $key + 1;
+		if ( is_string($token) or !in_array($token[0], $statement_tokens) ) continue;
 
-			$space_done = false;
-			if ( @$tokens[$k][0] === T_WHITESPACE ) {
-				$tokens[$k][1] = " ";
-				$space_done = true;
-				$k++;
-			}
+		$tokens_arg = get_argument_tokens($tokens, $key);
+		$tokens_arg_orig = $tokens_arg;
 
-			if ( $tokens[$k] === "(" ) {
+		tokens_ltrim($tokens_arg);
 
-				$ke = $k + 1;
-				while (
-					isset($tokens[$ke]) and
-					$tokens[$ke] != ";" and
-					$tokens[$ke] != "}" and
-					@$tokens[$ke][0] != T_CLOSE_TAG
-				) {
-					$ke++;
+		if ( !count($tokens_arg) or $tokens_arg[0] !== "(" ) continue;
+
+		tokens_rtrim($tokens_arg);
+
+		// Check if the opening bracket has a matching one at the end of the expression
+		$round_braces_count = 0;
+		foreach ( $tokens_arg as $k => $t ) {
+			if (is_string($t)) {
+				if     ($t === "(") ++$round_braces_count;
+				elseif ($t === ")") --$round_braces_count;
+				else continue;
+				// Check if the expression begins without a bracket or if the bracket was closed before the end of the expression was reached
+				if ( $round_braces_count == 0 and $k != count($tokens_arg)-1 ) {
+					continue 2;
 				}
-
-				if ( $tokens[$ke-1] === ")" ) {
-					if ($space_done) {
-						$tokens[$k] = "";
-					} else {
-						$tokens[$k] = array(T_WHITESPACE, " ");
-					}
-					$tokens[$ke-1] = "";
+				if ( $round_braces_count < 0 ) {
+					possible_syntax_error($tokens, $key, "Closing round bracket found which has not been opened");
+					continue 2;
 				}
-
+			} else {
+				// Do not touch multiline expressions
+				if ($t[0] === T_WHITESPACE and strpos($t[1], "\n")!==false) {
+					continue 2;
+				}
 			}
-
 		}
+		// Detect missing brackets
+		if ($round_braces_count != 0) {
+			possible_syntax_error($tokens, $key, "Round bracket opened but no matching closing bracket found");
+			continue;
+		}
+
+		// Remove the outermost brackets
+		$tokens_arg = array_slice($tokens_arg, 1, -1);
+
+		tokens_ltrim($tokens_arg);
+		tokens_rtrim($tokens_arg);
+
+		// Add one space between the command and the argument if the argument is not empty
+		if ($tokens_arg) {
+			array_unshift($tokens_arg, array(T_WHITESPACE, " "));
+		}
+
+		array_splice($tokens, $key+1, count($tokens_arg_orig), $tokens_arg);
 
 	}
 
@@ -738,26 +993,27 @@ function fix_statement_brackets(&$tokens) {
 
 
 /**
- * Fix whitespace between commands and braces
+ * Fixes whitespace between commands and braces
  *
  * @param array   $tokens (reference)
  */
 function fix_separation_whitespace(&$tokens) {
 
-	reset($tokens);
-	while ( list($key, $token) = each($tokens) ) {
+	foreach ( $tokens as $key => &$token ) {
 		if (is_string($token)) {
 
 			// Exactly 1 space between closing round bracket and opening curly bracket
 			if ( $tokens[$key] === ")" ) {
-				if ( @$tokens[$key+1] === "{" ) {
+				if (
+					isset($tokens[$key+1]) and $tokens[$key+1] === "{"
+				) {
 					// Insert an additional space before the bracket
 					array_splice($tokens, $key+1, 0, array(
 							array(T_WHITESPACE, " ")
 						));
 				} elseif (
-					@$tokens[$key+1][0] === T_WHITESPACE and
-					@$tokens[$key+2] === "{"
+					isset($tokens[$key+1][0]) and $tokens[$key+1][0] === T_WHITESPACE and
+					isset($tokens[$key+2]) and $tokens[$key+2] === "{"
 				) {
 					// Set the existing whitespace before the bracket to exactly one space
 					$tokens[$key+1][1] = " ";
@@ -770,8 +1026,8 @@ function fix_separation_whitespace(&$tokens) {
 			case T_CLASS:
 				// Class definition
 				if (
-					@$tokens[$key+1][0] === T_WHITESPACE and
-					@$tokens[$key+2][0] === T_STRING
+					isset($tokens[$key+1][0]) and $tokens[$key+1][0] === T_WHITESPACE and
+					isset($tokens[$key+2][0]) and $tokens[$key+2][0] === T_STRING
 				) {
 					// Exactly 1 space between 'class' and the class name
 					$tokens[$key+1][1] = " ";
@@ -782,8 +1038,8 @@ function fix_separation_whitespace(&$tokens) {
 								array(T_WHITESPACE, " ")
 							));
 					} elseif (
-						@$tokens[$key+3][0] === T_WHITESPACE and
-						@$tokens[$key+4] === "{"
+						isset($tokens[$key+3][0]) and $tokens[$key+3][0] === T_WHITESPACE and
+						isset($tokens[$key+4]) and $tokens[$key+4] === "{"
 					) {
 						// Set the existing whitespace before the bracket to exactly one space
 						$tokens[$key+3][1] = " ";
@@ -793,13 +1049,13 @@ function fix_separation_whitespace(&$tokens) {
 			case T_FUNCTION:
 				// Function definition
 				if (
-					@$tokens[$key+1][0] === T_WHITESPACE and
-					@$tokens[$key+2][0] === T_STRING
+					isset($tokens[$key+1][0]) and $tokens[$key+1][0] === T_WHITESPACE and
+					isset($tokens[$key+2][0]) and $tokens[$key+2][0] === T_STRING
 				) {
 					// Exactly 1 Space between 'function' and the function name
 					$tokens[$key+1][1] = " ";
 					// No whitespace between function name and opening round bracket
-					if ( @$tokens[$key+3][0] === T_WHITESPACE ) {
+					if ( isset($tokens[$key+3][0]) and $tokens[$key+3][0] === T_WHITESPACE ) {
 						// Remove the whitespace
 						array_splice($tokens, $key+3, 1);
 					}
@@ -828,8 +1084,8 @@ function fix_separation_whitespace(&$tokens) {
 							array(T_WHITESPACE, " "),
 						));
 				} elseif (
-					@$tokens[$key+1][0] === T_WHITESPACE and
-					@$tokens[$key+2] === "{"
+					isset($tokens[$key+1][0]) and $tokens[$key+1][0] === T_WHITESPACE and
+					isset($tokens[$key+2]) and $tokens[$key+2] === "{"
 				) {
 					// Set the existing whitespace before the bracket to exactly one space
 					$tokens[$key+1][1] = " ";
@@ -845,20 +1101,19 @@ function fix_separation_whitespace(&$tokens) {
 
 
 /**
- * Add one space after a comma
+ * Adds one space after a comma
  *
  * @param array   $tokens (reference)
  */
 function fix_comma_space(&$tokens) {
 
-	reset($tokens);
-	while ( list($key, $token) = each($tokens) ) {
+	foreach ( $tokens as $key => &$token ) {
 		if (!is_string($token)) continue;
 		if (
 			// If the current token ends with a comma...
 			substr($token, -1) === "," and
 			// ...and the next token is no whitespace
-			@$tokens[$key+1][0] != T_WHITESPACE
+			!(isset($tokens[$key+1][0]) and $tokens[$key+1][0] === T_WHITESPACE)
 		) {
 			// Insert one space
 			array_splice($tokens, $key+1, 0, array(
@@ -871,78 +1126,75 @@ function fix_comma_space(&$tokens) {
 
 
 /**
- * Fix DocBlock format
+ * Fixes the format of a DocBlock
  *
  * @param array   $tokens (reference)
  */
 function fix_docblock_format(&$tokens) {
 
-	foreach ( $tokens as $key => $token ) {
-		if (is_string($token)) continue;
+	foreach ( $tokens as $key => &$token ) {
 
-		if ($token[0] === T_DOC_COMMENT) {
+		if ( is_string($token) or $token[0] !== T_DOC_COMMENT ) continue;
 
-			$lines_orig = explode("\n", $tokens[$key][1]);
+		$lines_orig = explode("\n", $tokens[$key][1]);
 
-			$lines = array();
-			$comments_started = false;
-			$doctags_started = false;
-			$last_line = false;
-			$param_max_variable_length = 0;
-			foreach ( $lines_orig as $line ) {
-				$line = trim($line);
-				// Strip empty lines
-				if ($line=="") continue;
-				if ($line!="/**" and $line!="*/") {
+		$lines = array();
+		$comments_started = false;
+		$doctags_started = false;
+		$last_line = false;
+		$param_max_variable_length = 0;
+		foreach ( $lines_orig as $line ) {
+			$line = trim($line);
+			// Strip empty lines
+			if ($line=="") continue;
+			if ($line!="/**" and $line!="*/") {
 
-					// Add stars where missing
-					if (substr($line, 0, 1)!="*") $line = "* ".$line;
-					elseif ($line!="*" and substr($line, 0, 2)!="* ") $line = "* ".substr($line, 1);
+				// Add stars where missing
+				if (substr($line, 0, 1)!="*") $line = "* ".$line;
+				elseif ($line!="*" and substr($line, 0, 2)!="* ") $line = "* ".substr($line, 1);
 
-					// Strip empty lines at the beginning
-					if (!$comments_started) {
-						if ($line=="*" and count($lines_orig)>3) continue;
-						$comments_started = true;
+				// Strip empty lines at the beginning
+				if (!$comments_started) {
+					if ($line=="*" and count($lines_orig)>3) continue;
+					$comments_started = true;
+				}
+
+				if (substr($line, 0, 3)=="* @") {
+
+					// Add empty line before DocTags if missing
+					if (!$doctags_started) {
+						if ($last_line!="*") $lines[] = "*";
+						if ($last_line=="/**") $lines[] = "*";
+						$doctags_started = true;
 					}
 
-					if (substr($line, 0, 3)=="* @") {
-
-						// Add empty line before DocTags if missing
-						if (!$doctags_started) {
-							if ($last_line!="*") $lines[] = "*";
-							if ($last_line=="/**") $lines[] = "*";
-							$doctags_started = true;
-						}
-
-						// DocTag format
-						if ( preg_match('/^\* @param(\s+[^\s\$]*)?\s+(&?\$[^\s]+)/', $line, $matches) ) {
-							$param_max_variable_length = max($param_max_variable_length, strlen($matches[2]));
-						}
-
+					// DocTag format
+					if ( preg_match('/^\* @param(\s+[^\s\$]*)?\s+(&?\$[^\s]+)/', $line, $matches) ) {
+						$param_max_variable_length = max($param_max_variable_length, strlen($matches[2]));
 					}
 
 				}
-				$lines[] = $line;
-				$last_line = $line;
-			}
-
-			foreach ( $lines as $l => $line ) {
-
-				// DocTag format
-				if ( preg_match('/^\* @param(\s+([^\s\$]*))?(\s+(&?\$[^\s]+))?(.*)$/', $line, $matches) ) {
-					$line = "* @param ";
-					if ($matches[2]) $line .= str_pad($matches[2], 7); else $line .= "unknown";
-					$line .= " ";
-					if ($matches[4]) $line .= str_pad($matches[4], $param_max_variable_length)." ";
-					$line .= trim($matches[5]);
-					$lines[$l] = $line;
-				}
 
 			}
+			$lines[] = $line;
+			$last_line = $line;
+		}
 
-			$tokens[$key][1] = join("\n", $lines);
+		foreach ( $lines as $l => $line ) {
+
+			// DocTag format
+			if ( preg_match('/^\* @param(\s+([^\s\$]*))?(\s+(&?\$[^\s]+))?(.*)$/', $line, $matches) ) {
+				$line = "* @param ";
+				if ($matches[2]) $line .= str_pad($matches[2], 7); else $line .= "unknown";
+				$line .= " ";
+				if ($matches[4]) $line .= str_pad($matches[4], $param_max_variable_length)." ";
+				$line .= trim($matches[5]);
+				$lines[$l] = $line;
+			}
 
 		}
+
+		$token[1] = join("\n", $lines);
 
 	}
 
@@ -950,7 +1202,7 @@ function fix_docblock_format(&$tokens) {
 
 
 /**
- * Adjust empty lines after DocBlocks
+ * Adjusts empty lines after DocBlocks
  *
  * @param array   $tokens (reference)
  */
@@ -958,10 +1210,9 @@ function fix_docblock_space(&$tokens) {
 
 	$filedocblock = true;
 
-	foreach ( $tokens as $key => $token ) {
-		if (is_string($token)) continue;
+	foreach ( $tokens as $key => &$token ) {
 
-		if ($token[0] !== T_DOC_COMMENT) continue;
+		if ( is_string($token) or $token[0] !== T_DOC_COMMENT ) continue;
 
 		if ( $filedocblock ) {
 
@@ -981,9 +1232,9 @@ function fix_docblock_space(&$tokens) {
 			// Add empty lines before the DocBlock
 			if ( $tokens[$key-1][0] === T_WHITESPACE ) {
 				$n = 2;
-				if ( substr(token_text($tokens[$key-2]), -1) == "\n" ) $n--;
+				if ( substr(token_text($tokens[$key-2]), -1) == "\n" ) --$n;
 				// At least 2 empty lines before the docblock of a function
-				if ( $tokens[$key+2][0] === T_FUNCTION ) $n++;
+				if ( $tokens[$key+2][0] === T_FUNCTION ) ++$n;
 				if ( strpos($tokens[$key-1][1], str_repeat("\n", $n)) === false ) {
 					$tokens[$key-1][1] = preg_replace("/(\n){1,".$n."}/", str_repeat("\n", $n), $tokens[$key-1][1]);
 				}
@@ -997,7 +1248,7 @@ function fix_docblock_space(&$tokens) {
 
 
 /**
- * Add blank lines after functions
+ * Adds 2 blank lines after functions and classes
  *
  * @param array   $tokens (reference)
  */
@@ -1011,41 +1262,50 @@ function add_blank_lines(&$tokens) {
 
 	$heredoc_started = false;
 
-	foreach ($tokens as $key => $token) {
+	foreach ($tokens as $key => &$token) {
 
-		// Skip heredoc
+		// Skip HEREDOC
 		if ( $heredoc_started ) {
 			if ( isset($token[0]) and $token[0] === T_END_HEREDOC ) {
 				$heredoc_started = false;
 			}
 			continue;
 		}
-		if ( isset($token[0]) and $token[0] === T_START_HEREDOC ) {
-			$heredoc_started = true;
-			continue;
-		}
 
-		// Remember the type of control structure
-		if (
-			isset($token[0]) and
-			in_array($token[0], array(T_IF, T_ELSEIF, T_WHILE, T_FOR, T_FOREACH, T_SWITCH, T_FUNCTION, T_CLASS))
-		) {
-			$control_structure = $token[0];
-			continue;
+		if (is_array($token)) {
+
+			// Detect beginning of a HEREDOC block
+			if ( $token[0] === T_START_HEREDOC ) {
+				$heredoc_started = true;
+				continue;
+			}
+
+			// Remember the type of control structure
+			if ( in_array($token[0], array(T_IF, T_ELSEIF, T_WHILE, T_FOR, T_FOREACH, T_SWITCH, T_FUNCTION, T_CLASS)) ) {
+				$control_structure = $token[0];
+				continue;
+			}
+
 		}
 
 		if ($token === "}") {
 
-			if ( in_array($curly_brace_opener[$curly_braces_count], array(T_FUNCTION, T_CLASS)) ) {
+			if (
+				$curly_brace_opener[$curly_braces_count] === T_FUNCTION or
+				$curly_brace_opener[$curly_braces_count] === T_CLASS
+			) {
 
-				// At least 2 blank lines after a function
-				if ( $tokens[$key+1][0] === T_WHITESPACE and substr($tokens[$key+1][1], 0, 2) != "\n\n\n" ) {
+				// At least 2 blank lines after a function or class
+				if (
+					$tokens[$key+1][0] === T_WHITESPACE and
+					substr($tokens[$key+1][1], 0, 2) != "\n\n\n"
+				) {
 					$tokens[$key+1][1] = preg_replace("/^([ \t]*\n){1,3}/", "\n\n\n", $tokens[$key+1][1]);
 				}
 
 			}
 
-			$curly_braces_count--;
+			--$curly_braces_count;
 
 		} elseif (
 			$token === "{" or (
@@ -1056,7 +1316,7 @@ function add_blank_lines(&$tokens) {
 			)
 		) {
 
-			$curly_braces_count++;
+			++$curly_braces_count;
 			$curly_brace_opener[$curly_braces_count] = $control_structure;
 
 		}
@@ -1085,16 +1345,19 @@ function indent(&$tokens) {
 	$control_structure = array(0);
 
 	$heredoc_started = false;
+	$trinity_started = false;
 
-	foreach ($tokens as $key => $token) {
+	foreach ( $tokens as $key => &$token ) {
 
-		// Skip heredoc
+		// Skip HEREDOC
 		if ( $heredoc_started ) {
 			if ( isset($token[0]) and $token[0] === T_END_HEREDOC ) {
 				$heredoc_started = false;
 			}
 			continue;
 		}
+
+		// Detect beginning of a HEREDOC block
 		if ( isset($token[0]) and $token[0] === T_START_HEREDOC ) {
 			$heredoc_started = true;
 			continue;
@@ -1104,30 +1367,28 @@ function indent(&$tokens) {
 		if (isset($tokens[$key+1])) {
 			if (is_string($tokens[$key+1])) {
 				if (
-					!is_string($tokens[$key]) and
-					$tokens[$key][0] === T_WHITESPACE and
-					!preg_match("/\n/", $tokens[$key][1])
+					is_string($token) or
+					$token[0] !== T_WHITESPACE or
+					strpos($token[1], "\n")!==false
 				) {
-					// Ignore
-				} else {
-					if     ($tokens[$key+1] === "}") $curly_braces_count--;
-					elseif ($tokens[$key+1] === ")") $round_braces_count--;
+					if     ($tokens[$key+1] === "}") --$curly_braces_count;
+					elseif ($tokens[$key+1] === ")") --$round_braces_count;
 				}
 			} else {
 				if (
 					// If the next token is a T_WHITESPACE without a \n, we have to look at the one after the next.
+					isset($tokens[$key+2]) and
 					$tokens[$key+1][0] === T_WHITESPACE and
-					!preg_match("/\n/", $tokens[$key+1][1]) and
-					isset($tokens[$key+2])
+					strpos($tokens[$key+1][1], "\n")===false
 				) {
-					if     ($tokens[$key+2] === "}") $curly_braces_count--;
-					elseif ($tokens[$key+2] === ")") $round_braces_count--;
+					if     ($tokens[$key+2] === "}") --$curly_braces_count;
+					elseif ($tokens[$key+2] === ")") --$round_braces_count;
 				}
 			}
 		}
 
-		if     ($token === "(") $round_braces_control++;
-		elseif ($token === ")") $round_braces_control--;
+		if     ($token === "(") ++$round_braces_control;
+		elseif ($token === ")") --$round_braces_control;
 
 		if ( $token === "(" ) {
 
@@ -1135,12 +1396,12 @@ function indent(&$tokens) {
 				// Remember which command was before the bracket
 				$k = $key;
 				do {
-					$k--;
-					$round_brace_opener = @$tokens[$k][0];
+					--$k;
+					$round_brace_opener = isset($tokens[$k][0]) ? $tokens[$k][0] : null;
 				} while (isset($tokens[$k]) and (!$round_brace_opener or $round_brace_opener===T_WHITESPACE));
 			}
 
-			$round_braces_count++;
+			++$round_braces_count;
 
 		} elseif (
 			(
@@ -1157,11 +1418,15 @@ function indent(&$tokens) {
 			)
 		) {
 			// All control stuctures end with a curly bracket, except "else" and "do".
-			@$control_structure[$curly_braces_count]++;
+			if (isset($control_structure[$curly_braces_count])) {
+				++$control_structure[$curly_braces_count];
+			} else {
+				$control_structure[$curly_braces_count] = 1;
+			}
 
 		} elseif ( $token === ";" or $token === "}" ) {
 			// After a command or a set of commands a control structure is closed.
-			if (@$control_structure[$curly_braces_count]) $control_structure[$curly_braces_count]--;
+			if (!empty($control_structure[$curly_braces_count])) --$control_structure[$curly_braces_count];
 
 		} else {
 			indent_text(
@@ -1170,13 +1435,14 @@ function indent(&$tokens) {
 				$curly_braces_count,
 				$round_braces_count,
 				$control_structure,
-				(is_array($token) and $token[0] === T_DOC_COMMENT)
+				(is_array($token) and $token[0] === T_DOC_COMMENT),
+				$trinity_started
 			);
 
 		}
 
 		if (
-			$token=="{" or (
+			$token === "{" or (
 				is_array($token) and (
 					$token[0] === T_CURLY_OPEN or
 					$token[0] === T_DOLLAR_OPEN_CURLY_BRACES
@@ -1184,8 +1450,8 @@ function indent(&$tokens) {
 			)
 		) {
 			// If a curly bracket occurs, no command without brackets can follow.
-			if (@$control_structure[$curly_braces_count]) $control_structure[$curly_braces_count]--;
-			$curly_braces_count++;
+			if (!empty($control_structure[$curly_braces_count])) --$control_structure[$curly_braces_count];
+			++$curly_braces_count;
 			// Inside of the new level of curly brackets it starts with no control structure.
 			$control_structure[$curly_braces_count] = 0;
 		}
@@ -1196,7 +1462,7 @@ function indent(&$tokens) {
 
 
 /**
- * Indenting in einem Tokentext
+ * Indents one token
  *
  * @param array   $tokens             (reference)
  * @param integer $key
@@ -1204,21 +1470,23 @@ function indent(&$tokens) {
  * @param integer $round_braces_count
  * @param array   $control_structure
  * @param boolean $docblock
+ * @param boolean $trinity_started    (reference)
  */
-function indent_text( &$tokens, $key, $curly_braces_count, $round_braces_count, $control_structure, $docblock ) {
+function indent_text(&$tokens, $key, $curly_braces_count, $round_braces_count, $control_structure, $docblock, &$trinity_started) {
 
 	if ( is_string($tokens[$key]) ) {
 		$text =& $tokens[$key];
+		// If there is no line break it is only a inline string, not involved in indenting
+		if ( strpos($text, "\n")===false ) return;
 	} else {
-		if (token_is_taboo($tokens[$key])) return;
 		$text =& $tokens[$key][1];
+		// If there is no line break it is only a inline string, not involved in indenting
+		if ( strpos($text, "\n")===false ) return;
+		if (token_is_taboo($tokens[$key])) return;
 	}
 
-	// If there is no line break it is only a inline string, not involved in indenting
-	if ( !preg_match("/\n/", $text) ) return;
-
 	$indent = $curly_braces_count + $round_braces_count;
-	for ( $i=0; $i<=$curly_braces_count; $i++ ) {
+	for ( $i=0; $i<=$curly_braces_count; ++$i ) {
 		$indent += $control_structure[$i];
 	}
 
@@ -1228,29 +1496,88 @@ function indent_text( &$tokens, $key, $curly_braces_count, $round_braces_count, 
 		is_array($tokens[$key+1]) and (
 			$tokens[$key+1][0] === T_CASE or
 			$tokens[$key+1][0] === T_DEFAULT or (
-				// zuerst T_WHITESPACE ohne \n
-				$tokens[$key+1][0] === T_WHITESPACE and
-				!preg_match("/\n/", $tokens[$key+1][1]) and
 				isset($tokens[$key+2]) and
 				is_array($tokens[$key+2]) and (
 					$tokens[$key+2][0] === T_CASE or
 					$tokens[$key+2][0] === T_DEFAULT
-				)
+				) and
+				// T_WHITESPACE without \n first
+				$tokens[$key+1][0] === T_WHITESPACE and
+				strpos($tokens[$key+1][1], "\n")===false
 			)
 		)
-	) {
-		$indent--;
-	}
+	) --$indent;
 
 	// One additional indentation level for operators at the beginning or the end of a line
-	$operators = array("+", "-", "*", "/", "%", "=", "&", "|", "^", "<", ">", ".");
-	if (
-		!$round_braces_count and (
+	if (!$round_braces_count) {
+
+		static $operators = array(
+			// arithmetic
+			"+",
+			"-",
+			"*",
+			"/",
+			"%",
+			// assignment
+			"=",
+			array(T_PLUS_EQUAL,  "+="),
+			array(T_MINUS_EQUAL, "-="),
+			array(T_MUL_EQUAL,   "*="),
+			array(T_DIV_EQUAL,   "/="),
+			array(T_MOD_EQUAL,   "%="),
+			array(T_AND_EQUAL,   "&="),
+			array(T_OR_EQUAL,    "|="),
+			array(T_XOR_EQUAL,   "^="),
+			// bitwise
+			"&",
+			"|",
+			"^",
+			array(T_SL, "<<"),
+			array(T_SR, ">>"),
+			// comparison
+			array(T_IS_EQUAL,         "=="),
+			array(T_IS_IDENTICAL,     "==="),
+			array(T_IS_NOT_EQUAL,     "!="),
+			array(T_IS_NOT_EQUAL,     "<>"),
+			array(T_IS_NOT_IDENTICAL, "!=="),
+			"<",
+			">",
+			array(T_IS_SMALLER_OR_EQUAL, "<="),
+			array(T_IS_GREATER_OR_EQUAL, ">="),
+			// logical
+			array(T_LOGICAL_AND, "and"),
+			array(T_LOGICAL_OR,  "or"),
+			array(T_LOGICAL_XOR, "xor"),
+			array(T_BOOLEAN_AND, "&&"),
+			array(T_BOOLEAN_OR,  "||"),
+			// string
+			".",
+			array(T_CONCAT_EQUAL, ".="),
+			// type
+			array(T_INSTANCEOF, "instanceof")
+		);
+
+		if (
 			(isset($tokens[$key+1]) and in_array($tokens[$key+1], $operators)) or
 			(isset($tokens[$key-1]) and in_array($tokens[$key-1], $operators))
-		)
-	) {
-		$indent++;
+		) {
+			++$indent;
+		} elseif (
+			(isset($tokens[$key+1]) and $tokens[$key+1] === "?") or
+			(isset($tokens[$key-1]) and $tokens[$key-1] === "?")
+		) {
+			++$indent;
+			$trinity_started = true;
+		} elseif (
+			$trinity_started and (
+				(isset($tokens[$key+1]) and $tokens[$key+1] === ":") or
+				(isset($tokens[$key-1]) and $tokens[$key-1] === ":")
+			)
+		) {
+			++$indent;
+			$trinity_started = false;
+		}
+
 	}
 
 	$indent_str = str_repeat($GLOBALS['indent_char'], max($indent, 0));
@@ -1284,13 +1611,13 @@ function indent_text( &$tokens, $key, $curly_braces_count, $round_braces_count, 
 
 
 /**
- * Strip indenting before single closing PHP tags
+ * Strips indenting before single closing PHP tags
  *
  * @param array   $tokens (reference)
  */
 function strip_closetag_indenting(&$tokens) {
 
-	foreach ( $tokens as $key => $token ) {
+	foreach ( $tokens as $key => &$token ) {
 		if ( is_string($token) ) continue;
 		if (
 			// T_CLOSE_TAG with following \n
@@ -1310,7 +1637,7 @@ function strip_closetag_indenting(&$tokens) {
 				isset($tokens[$key-1]) and
 				is_array($tokens[$key-1]) and
 				$tokens[$key-1][0] === T_WHITESPACE and
-				!preg_match("/\n/", $tokens[$key-1][1]) and
+				strpos($tokens[$key-1][1], "\n")===false and
 				// T_WHITESPACE before or T_COMMENT with \n at the end
 				isset($tokens[$key-2]) and
 				is_array($tokens[$key-2]) and
@@ -1330,27 +1657,27 @@ function strip_closetag_indenting(&$tokens) {
 
 
 /**
- * Get all defined functions
+ * Gets all defined functions
  *
  * Functions inside of curly braces will be ignored.
  *
  * @param string  $content
  * @return array
  */
-function get_functions($content) {
+function get_functions(&$content) {
 
-	$tokens = token_get_all($content);
+	$tokens = get_tokens($content);
 
 	$functions = array();
 	$curly_braces_count = 0;
-	foreach ($tokens as $key => $token) {
+	foreach ( $tokens as $key => &$token ) {
 
 		if (is_string($token)) {
-			if     ($token === "{") $curly_braces_count++;
-			elseif ($token === "}") $curly_braces_count--;
+			if     ($token === "{") ++$curly_braces_count;
+			elseif ($token === "}") --$curly_braces_count;
 		} elseif (
 			$token[0] === T_FUNCTION and
-			!$curly_braces_count and
+			$curly_braces_count === 0 and
 			isset($tokens[$key+2]) and
 			is_array($tokens[$key+2])
 		) {
@@ -1364,68 +1691,56 @@ function get_functions($content) {
 
 
 /**
- * Get all defined includes
+ * Gets all defined includes
  *
  * @param array   $seetags (reference)
  * @param string  $content
  * @param string  $file
  */
-function find_includes(&$seetags, $content, $file) {
+function find_includes(&$seetags, &$content, $file) {
 
-	$tokens = token_get_all($content);
-	foreach ($tokens as $key => $token) {
+	$tokens = get_tokens($content);
+
+	foreach ( $tokens as $key => &$token ) {
 		if (is_string($token)) continue;
 
-		if ( in_array($token[0], array(T_REQUIRE, T_REQUIRE_ONCE, T_INCLUDE, T_INCLUDE_ONCE)) ) {
+		if ( !in_array($token[0], array(T_REQUIRE, T_REQUIRE_ONCE, T_INCLUDE, T_INCLUDE_ONCE)) ) continue;
 
-			// Step through the area until the ";" or close tag and strip whitespace
-			$t = array();
-			$k = $key + 1;
-			while (
-				$k < count($tokens) and
-				$tokens[$k] != ";" and
-				@$tokens[$k][0] !== T_CLOSE_TAG
-			) {
-				if ( @$tokens[$k][0] !== T_WHITESPACE ) {
-					$t[] = $tokens[$k];
-				}
-				$k++;
-			}
+		$t = get_argument_tokens($tokens, $key);
+		strip_whitespace($t);
 
-			if (!$t) {
-				possible_syntax_error($tokens, $key);
-				continue;
-			}
+		// Strip round brackets
+		if ( $t[0] === "(" and $t[count($t)-1] === ")" ) {
+			$t = array_splice($t, 1, -1);
+		}
 
-			// Strip round brackets
-			if ( $t[0] === "(" and $t[count($t)-1] === ")" ) {
-				$t = array_splice($t, 1, -1);
-			}
+		if (!$t) {
+			possible_syntax_error($tokens, $key, "Missing argument");
+			continue;
+		}
 
-			// Strip leading docroot variable
-			if (
-				isset($t[0][0]) and
-				$t[0][0] === T_VARIABLE and
-				in_array($t[0][1], $GLOBALS['docrootvars']) and
-				$t[1] === "."
-			) {
-				$t = array_splice($t, 2);
-			}
+		if (!is_array($t[0])) continue;
 
-			if (!$t) {
-				possible_syntax_error($tokens, $key);
-				continue;
-			}
+		// Strip leading docroot variable
+		if (
+			$t[0][0] === T_VARIABLE and
+			in_array($t[0][1], $GLOBALS['docrootvars']) and
+			$t[1] === "."
+		) {
+			$t = array_splice($t, 2);
+		}
 
-			if (
-				count($t) == 1 and
-				isset($t[0][0]) and
-				$t[0][0] === T_CONSTANT_ENCAPSED_STRING
-			) {
-				$includedfile = substr($t[0][1], 1, -1);
-				$seetags[$includedfile][] = array($file);
-			}
+		if (
+			count($t) == 1 and
+			$t[0][0] === T_CONSTANT_ENCAPSED_STRING
+		) {
+			$includedfile = substr($t[0][1], 1, -1);
+			$seetags[$includedfile][] = array($file);
+			continue;
+		}
 
+		if (!$t) {
+			possible_syntax_error($tokens, $key, "String concatenator without following string");
 		}
 
 	}
@@ -1434,7 +1749,7 @@ function find_includes(&$seetags, $content, $file) {
 
 
 /**
- * Replace one DocTag in a DocBlock
+ * Replaces one DocTag in a DocBlock
  *
  * Existing valid DocTags will be used without change
  *
@@ -1466,12 +1781,12 @@ function add_doctags_to_doc_comment($text, $tagname, $tags) {
 
 		// Add doctags after the last line
 		if ( $key == count($lines)-1 ) {
-			foreach ($tags as $tag) {
+			foreach ( $tags as $tag ) {
 				$tagid = $tag[0];
 				if ( isset($oldtags[$tagid]) and count($oldtags[$tagid]) ) {
 
 					// Use existing line
-					foreach ($oldtags[$tagid] as $oldtag) {
+					foreach ( $oldtags[$tagid] as $oldtag ) {
 
 						if (
 							$tagname == "param" and
@@ -1504,7 +1819,7 @@ function add_doctags_to_doc_comment($text, $tagname, $tags) {
 					switch ($tagname) {
 					case "param":
 						if (empty($tag[1])) $tag[1] = "unknown";
-						$newtext .= "* @param ".$tag[1]." ".$tag[0]." ".@$tag[2]."\n";
+						$newtext .= "* @param ".$tag[1]." ".$tag[0].(isset($tag[2])?" ".$tag[2]:"")."\n";
 						break;
 					case "uses":
 						$newtext .= "* @uses ".$tag[0]."()\n";
@@ -1513,7 +1828,9 @@ function add_doctags_to_doc_comment($text, $tagname, $tags) {
 						$newtext .= "* @return unknown\n";
 						break;
 					case "author":
-						$newtext .= "* @author ".$GLOBALS['default_author']."\n";
+						if ($GLOBALS['default_author']) {
+							$newtext .= "* @author ".$GLOBALS['default_author']."\n";
+						}
 						break;
 					case "package":
 						$newtext .= "* @package ".$GLOBALS['default_package']."\n";
@@ -1549,7 +1866,7 @@ function add_doctags_to_doc_comment($text, $tagname, $tags) {
 
 
 /**
- * Collect doctags for a function docblock
+ * Collects the doctags for a function docblock
  *
  * @param array   $tokens (reference)
  * @return array
@@ -1564,12 +1881,12 @@ function collect_doctags(&$tokens) {
 	$paramtags = array();
 	$returntags = array();
 
-	foreach ($tokens as $key => $token) {
+	foreach ( $tokens as $key => &$token ) {
 
 		if (is_string($token)) {
 
 			if ($token === "{") {
-				$curly_braces_count++;
+				++$curly_braces_count;
 			} elseif ($token === "}") {
 				if (--$curly_braces_count==0) $function = "";
 			}
@@ -1584,18 +1901,18 @@ function collect_doctags(&$tokens) {
 
 				$k = $key + 1;
 
-				if ( @$tokens[$k][0] !== T_WHITESPACE ) {
-					possible_syntax_error($tokens, $k);
+				if ( is_string($tokens[$k]) or $tokens[$k][0] !== T_WHITESPACE ) {
+					possible_syntax_error($tokens, $k, "No whitespace found between function keyword and function name");
 					break;
 				}
 
-				$k++;
+				++$k;
 
 				// & before function name
-				if ( $tokens[$k] === "&" ) $k++;
+				if ( $tokens[$k] === "&" ) ++$k;
 
-				if ( @$tokens[$k][0] !== T_STRING ) {
-					possible_syntax_error($tokens, $k);
+				if ( is_string($tokens[$k]) or $tokens[$k][0] !== T_STRING ) {
+					possible_syntax_error($tokens, $k, "No string for function name found");
 					break;
 				}
 
@@ -1608,8 +1925,8 @@ function collect_doctags(&$tokens) {
 				$reference = false;
 				while ( ($tokens[$k] != ")" or $round_braces_count) and $k < count($tokens) ) {
 					if ( is_string($tokens[$k]) ) {
-						if     ($tokens[$k] === "(") $round_braces_count++;
-						elseif ($tokens[$k] === ")") $round_braces_count--;
+						if     ($tokens[$k] === "(") ++$round_braces_count;
+						elseif ($tokens[$k] === ")") --$round_braces_count;
 						elseif ($tokens[$k] === "&") $reference = true;
 					} else {
 						$typehint = false;
@@ -1619,15 +1936,15 @@ function collect_doctags(&$tokens) {
 							$typehint = "";
 						} elseif (
 							$tokens[$k][0] === T_ARRAY and
-							@$tokens[$k+1][0] === T_WHITESPACE and
-							@$tokens[$k+2][0] === T_VARIABLE
+							isset($tokens[$k+1][0]) and $tokens[$k+1][0] === T_WHITESPACE and
+							isset($tokens[$k+2][0]) and $tokens[$k+2][0] === T_VARIABLE
 						) {
 							$k += 2;
 							$typehint = "array";
 						} elseif (
 							$tokens[$k][0] === T_STRING and
-							@$tokens[$k+1][0] === T_WHITESPACE and
-							@$tokens[$k+2][0] === T_VARIABLE
+							isset($tokens[$k+1][0]) and $tokens[$k+1][0] === T_WHITESPACE and
+							isset($tokens[$k+2][0]) and $tokens[$k+2][0] === T_VARIABLE
 						) {
 							$k += 2;
 							$typehint = "object";
@@ -1635,9 +1952,9 @@ function collect_doctags(&$tokens) {
 						if ($typehint !== false) {
 							$comments = array();
 							if (
-								@$tokens[$k+1] === "=" or (
-									@$tokens[$k+1][0] === T_WHITESPACE and
-									@$tokens[$k+2] === "="
+								(isset($tokens[$k+1]) and $tokens[$k+1] === "=") or (
+									isset($tokens[$k+1][0]) and $tokens[$k+1][0] === T_WHITESPACE and
+									isset($tokens[$k+2]) and $tokens[$k+2] === "="
 								)
 							) {
 								$comments[] = "optional";
@@ -1654,12 +1971,12 @@ function collect_doctags(&$tokens) {
 							$paramtags[$function][] = array($tokens[$k][1], $typehint, $comment);
 						}
 					}
-					$k++;
+					++$k;
 				}
 				break;
 			case T_CURLY_OPEN:
 			case T_DOLLAR_OPEN_CURLY_BRACES:
-				$curly_braces_count++;
+				++$curly_braces_count;
 				break;
 			case T_STRING:
 				// Find function calls
@@ -1691,7 +2008,7 @@ function collect_doctags(&$tokens) {
 
 
 /**
- * Add file DocBlocks where missing
+ * Adds file DocBlocks where missing
  *
  * @param array   $tokens (reference)
  */
@@ -1699,9 +2016,11 @@ function add_file_docblock(&$tokens) {
 
 	$default_file_docblock = "/**\n".
 		" * ".$GLOBALS['file']."\n".
-		" *\n".
-		" * @author ".$GLOBALS['default_author']."\n".
-		" * @package ".$GLOBALS['default_package']."\n".
+		" *\n";
+	if ($GLOBALS['default_author']) {
+		$default_file_docblock .= " * @author ".$GLOBALS['default_author']."\n";
+	}
+	$default_file_docblock .= " * @package ".$GLOBALS['default_package']."\n".
 		" */";
 
 	// File begins with PHP
@@ -1781,46 +2100,43 @@ function add_file_docblock(&$tokens) {
 
 
 /**
- * Add funktion DocBlocks where missing
+ * Adds funktion DocBlocks where missing
  *
  * @param array   $tokens (reference)
  */
 function add_function_docblocks(&$tokens) {
 
-	reset($tokens);
-	while ( list($key, $token) = each($tokens) ) {
-		if (is_string($token)) continue;
+	foreach ( $tokens as $key => &$token ) {
 
-		if ( $token[0] === T_FUNCTION ) {
+		if ( is_string($token) or $token[0] !== T_FUNCTION ) continue;
 
-			// Find beginning of the function declaration
-			$k = $key;
-			while (
-				isset($tokens[$k-1]) and
-				strpos(token_text($tokens[$k-1]), "\n")===false
-			) $k--;
+		// Find beginning of the function declaration
+		$k = $key;
+		while (
+			isset($tokens[$k-1]) and
+			strpos(token_text($tokens[$k-1]), "\n")===false
+		) --$k;
 
-			if (
-				!isset($tokens[$k-2]) or
-				!is_array($tokens[$k-2]) or
-				$tokens[$k-2][0] != T_DOC_COMMENT
-			) {
-				array_splice($tokens, $k, 0, array(
-						array(T_DOC_COMMENT, "/**\n".
-							" *\n".
-							" */"),
-						array(T_WHITESPACE, "\n")
-					));
-			}
-
+		if (
+			!isset($tokens[$k-2]) or
+			!is_array($tokens[$k-2]) or
+			$tokens[$k-2][0] != T_DOC_COMMENT
+		) {
+			array_splice($tokens, $k, 0, array(
+					array(T_DOC_COMMENT, "/**\n".
+						" *\n".
+						" */"),
+					array(T_WHITESPACE, "\n")
+				));
 		}
+
 	}
 
 }
 
 
 /**
- * Add DocTags to a file or function DocBlocks
+ * Adds DocTags to file or function DocBlocks
  *
  * @param array   $tokens     (reference)
  * @param array   $usetags
@@ -1832,14 +2148,14 @@ function add_doctags(&$tokens, $usetags, $paramtags, $returntags, $seetags) {
 
 	$filedocblock = false;
 
-	foreach ($tokens as $key => $token) {
+	foreach ( $tokens as $key => &$token ) {
 
 		if (is_string($token)) continue;
 		list($id, $text) = $token;
 		if ($id != T_DOC_COMMENT) continue;
 
 		$k = $key + 1;
-		while ( in_array($tokens[$k][0], array(T_WHITESPACE, T_STATIC, T_PUBLIC, T_PROTECTED, T_PRIVATE)) ) $k++;
+		while ( in_array($tokens[$k][0], array(T_WHITESPACE, T_STATIC, T_PUBLIC, T_PROTECTED, T_PRIVATE)) ) ++$k;
 
 		if (
 			$tokens[$k][0] === T_FUNCTION and
