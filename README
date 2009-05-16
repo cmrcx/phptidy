@@ -50,9 +50,6 @@ phptidy is released under the GPL and can be used for free.
 - PHP extension: Tokenizer
     http://php.net/manual/en/book.tokenizer.php
 
-- A Unix-like system (Linux, MacOS X, BSD, ...)
-    It may run on other operating systems, but I've never tried.
-
  Optional:
 
 - diff
@@ -63,6 +60,10 @@ phptidy is released under the GPL and can be used for free.
     http://php.net/manual/en/book.tokenizer.php
     Only required if you want to use the configration variable $encoding to
     check the encoding of your PHP files.
+
+ phptidy should work on most operation systems where PHP works. I use it in
+ Linux and I have confirmations that it works on MacOS X. Some people use it
+ even on Windows.
 
 
 === Installation ===

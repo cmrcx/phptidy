@@ -24,7 +24,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * @version 2.8 (2008-05-22)
+ * @version 2.9 (2009-01-07)
  * @author  Magnus Rosenbaum <phptidy@cmr.cx>
  * @package phptidy
  */
@@ -59,6 +59,12 @@ $default_package = "default";
 //                "  " for indenting with two spaces
 $indent_char = "\t";
 
+// Control structures with the opening curly brace on a new line
+// Examples: false                      always on the same line
+//           true                       always on a new line
+//           array(T_CLASS, T_FUNCTION) for PEAR Coding Standards
+$curly_brace_newline = false;
+
 // PHP open tag
 // All php open tags will be replaced by the here defined kind of open tag.
 // Useful values: "<?", "<?php", "<?PHP"
@@ -76,6 +82,23 @@ $encoding = "";
 // commands to generate appropriate @see tags also for these files.
 // Example: array('$docroot', '$GLOBALS[\'docroot\']');
 $docrootvars = array();
+
+// Enable the single cleanup functions
+$fix_token_case = true;
+$fix_builtin_functions_case = true;
+$replace_inline_tabs = true;
+$replace_phptags = true;
+$replace_shell_comments = true;
+$fix_statement_brackets = true;
+$fix_separation_whitespace = true;
+$fix_comma_space = true;
+$add_file_docblock = true;
+$add_function_docblocks = true;
+$add_doctags = true;
+$fix_docblock_format = true;
+$fix_docblock_space = true;
+$add_blank_lines = true;
+$indent = true;
 
 ///////////// END OF DEFAULT CONFIGURATION ////////////////
 
@@ -400,34 +423,38 @@ function phptidy($source) {
 		exit;
 	}
 
-	// If you don't want some of the corrections, you can comment them out here:
-
 	// Simple formatting
-	fix_token_case($tokens);
-	fix_builtin_functions_case($tokens);
-	replace_inline_tabs($tokens);
-	replace_phptags($tokens);
-	replace_shell_comments($tokens);
-	fix_statement_brackets($tokens);
-	fix_separation_whitespace($tokens);
-	fix_comma_space($tokens);
+	if ($GLOBALS['fix_token_case']) fix_token_case($tokens);
+	if ($GLOBALS['fix_builtin_functions_case']) fix_builtin_functions_case($tokens);
+	if ($GLOBALS['replace_inline_tabs']) replace_inline_tabs($tokens);
+	if ($GLOBALS['replace_phptags']) replace_phptags($tokens);
+	if ($GLOBALS['replace_shell_comments']) replace_shell_comments($tokens);
+	if ($GLOBALS['fix_statement_brackets']) fix_statement_brackets($tokens);
+	if ($GLOBALS['fix_separation_whitespace']) fix_separation_whitespace($tokens);
+	if ($GLOBALS['fix_comma_space']) fix_comma_space($tokens);
 
 	// PhpDocumentor
-	list($usestags, $paramtags, $returntags) = collect_doctags($tokens);
-	//print_r($usestags);
-	//print_r($paramtags);
-	//print_r($returntags);
-	add_file_docblock($tokens);
-	add_function_docblocks($tokens);
-	add_doctags($tokens, $usestags, $paramtags, $returntags, $GLOBALS['seetags']);
-	fix_docblock_format($tokens);
-	fix_docblock_space($tokens);
+	if ($GLOBALS['add_doctags']) {
+		list($usestags, $paramtags, $returntags) = collect_doctags($tokens);
+		//print_r($usestags);
+		//print_r($paramtags);
+		//print_r($returntags);
+	}
+	if ($GLOBALS['add_file_docblock']) add_file_docblock($tokens);
+	if ($GLOBALS['add_function_docblocks']) add_function_docblocks($tokens);
+	if ($GLOBALS['add_doctags']) {
+		add_doctags($tokens, $usestags, $paramtags, $returntags, $GLOBALS['seetags']);
+	}
+	if ($GLOBALS['fix_docblock_format']) fix_docblock_format($tokens);
+	if ($GLOBALS['fix_docblock_space']) fix_docblock_space($tokens);
 
-	add_blank_lines($tokens);
+	if ($GLOBALS['add_blank_lines']) add_blank_lines($tokens);
 
 	// Indenting
-	indent($tokens);
-	strip_closetag_indenting($tokens);
+	if ($GLOBALS['indent']) {
+		indent($tokens);
+		strip_closetag_indenting($tokens);
+	}
 
 	$source = combine_tokens($tokens);
 
@@ -999,24 +1026,26 @@ function fix_statement_brackets(&$tokens) {
  */
 function fix_separation_whitespace(&$tokens) {
 
+	$control_structure = false;
+
 	foreach ( $tokens as $key => &$token ) {
 		if (is_string($token)) {
 
-			// Exactly 1 space between closing round bracket and opening curly bracket
+			// Exactly 1 space or a newline between closing round bracket and opening curly bracket
 			if ( $tokens[$key] === ")" ) {
 				if (
 					isset($tokens[$key+1]) and $tokens[$key+1] === "{"
 				) {
-					// Insert an additional space before the bracket
+					// Insert an additional space or newline before the bracket
 					array_splice($tokens, $key+1, 0, array(
-							array(T_WHITESPACE, " ")
+							array(T_WHITESPACE, separation_whitespace($control_structure))
 						));
 				} elseif (
 					isset($tokens[$key+1][0]) and $tokens[$key+1][0] === T_WHITESPACE and
 					isset($tokens[$key+2]) and $tokens[$key+2] === "{"
 				) {
-					// Set the existing whitespace before the bracket to exactly one space
-					$tokens[$key+1][1] = " ";
+					// Set the existing whitespace before the bracket to exactly one space or newline
+					$tokens[$key+1][1] = separation_whitespace($control_structure);
 				}
 			}
 
@@ -1033,16 +1062,16 @@ function fix_separation_whitespace(&$tokens) {
 					$tokens[$key+1][1] = " ";
 					// Exactly 1 space between the class name and the opening curly bracket
 					if ( $tokens[$key+3] === "{" ) {
-						// Insert an additional space before the bracket
+						// Insert an additional space or newline before the bracket
 						array_splice($tokens, $key+3, 0, array(
-								array(T_WHITESPACE, " ")
+								array(T_WHITESPACE, separation_whitespace(T_CLASS))
 							));
 					} elseif (
 						isset($tokens[$key+3][0]) and $tokens[$key+3][0] === T_WHITESPACE and
 						isset($tokens[$key+4]) and $tokens[$key+4] === "{"
 					) {
-						// Set the existing whitespace before the bracket to exactly one space
-						$tokens[$key+3][1] = " ";
+						// Set the existing whitespace before the bracket to exactly one space or a newline
+						$tokens[$key+3][1] = separation_whitespace(T_CLASS);
 					}
 				}
 				break;
@@ -1069,9 +1098,9 @@ function fix_separation_whitespace(&$tokens) {
 			case T_SWITCH:
 				// At least 1 space between a statement and a opening round bracket
 				if ( $tokens[$key+1] === "(" ) {
-					// Insert an additional space before the bracket
+					// Insert an additional space or newline before the bracket
 					array_splice($tokens, $key+1, 0, array(
-							array(T_WHITESPACE, " "),
+							array(T_WHITESPACE, separation_whitespace(T_SWITCH)),
 						));
 				}
 				break;
@@ -1079,24 +1108,46 @@ function fix_separation_whitespace(&$tokens) {
 			case T_DO:
 				// Exactly 1 space between a command and a opening curly bracket
 				if ( $tokens[$key+1] === "{" ) {
-					// Insert an additional space before the bracket
+					// Insert an additional space or newline before the bracket
 					array_splice($tokens, $key+1, 0, array(
-							array(T_WHITESPACE, " "),
+							array(T_WHITESPACE, separation_whitespace(T_DO)),
 						));
 				} elseif (
 					isset($tokens[$key+1][0]) and $tokens[$key+1][0] === T_WHITESPACE and
 					isset($tokens[$key+2]) and $tokens[$key+2] === "{"
 				) {
-					// Set the existing whitespace before the bracket to exactly one space
-					$tokens[$key+1][1] = " ";
+					// Set the existing whitespace before the bracket to exactly one space or a newline
+					$tokens[$key+1][1] = separation_whitespace(T_DO);
 				}
 				break;
+			default:
+				// Do not set $control_structure if the token is no control structure
+				continue 2;
 			}
+
+			$control_structure = $token[0];
 
 		}
 
 	}
 
+}
+
+
+/**
+ * Whitespace before an opening curly bracket depending on the control structure
+ *
+ * @param integer $control_structure token of the control structure
+ * @return string
+ */
+function separation_whitespace($control_structure) {
+	if (
+		$GLOBALS['curly_brace_newline']===true or (
+			is_array($GLOBALS['curly_brace_newline']) and
+			in_array($control_structure, $GLOBALS['curly_brace_newline'])
+		)
+	) return "\n";
+	return " ";
 }
 
 
@@ -1397,8 +1448,17 @@ function indent(&$tokens) {
 				$k = $key;
 				do {
 					--$k;
-					$round_brace_opener = isset($tokens[$k][0]) ? $tokens[$k][0] : null;
-				} while (isset($tokens[$k]) and (!$round_brace_opener or $round_brace_opener===T_WHITESPACE));
+				} while (
+					isset($tokens[$k]) and (
+						$tokens[$k][0] === T_WHITESPACE or
+						$tokens[$k][0] === T_STRING
+					)
+				);
+				if (is_array($tokens[$k])) {
+					$round_brace_opener = $tokens[$k][0];
+				} else {
+					$round_brace_opener = false;
+				}
 			}
 
 			++$round_braces_count;
@@ -1409,7 +1469,7 @@ function indent(&$tokens) {
 				$round_braces_control == 0 and
 				in_array(
 					$round_brace_opener,
-					array(T_IF, T_ELSEIF, T_WHILE, T_FOR, T_FOREACH, T_SWITCH)
+					array(T_IF, T_ELSEIF, T_WHILE, T_FOR, T_FOREACH, T_SWITCH, T_FUNCTION)
 				)
 			) or (
 				is_array($token) and (
@@ -1505,6 +1565,22 @@ function indent_text(&$tokens, $key, $curly_braces_count, $round_braces_count, $
 				$tokens[$key+1][0] === T_WHITESPACE and
 				strpos($tokens[$key+1][1], "\n")===false
 			)
+		)
+	) --$indent;
+
+	// One indentation level less for an opening curly brace on a seperate line
+	if (
+		isset($tokens[$key+2]) and (
+			$tokens[$key+1] === "{" or (
+				is_array($tokens[$key+1]) and (
+					$tokens[$key+1][0] === T_CURLY_OPEN or
+					$tokens[$key+1][0] === T_DOLLAR_OPEN_CURLY_BRACES
+				)
+			)
+		) and (
+			is_array($tokens[$key+2]) and
+			$tokens[$key+2][0] === T_WHITESPACE and
+			strpos($tokens[$key+2][1], "\n")!==false
 		)
 	) --$indent;
 
@@ -2122,12 +2198,29 @@ function add_function_docblocks(&$tokens) {
 			!is_array($tokens[$k-2]) or
 			$tokens[$k-2][0] != T_DOC_COMMENT
 		) {
-			array_splice($tokens, $k, 0, array(
+
+			// Collect old non-phpdoc comments
+			$comment = "";
+			$replace = 0;
+			while (
+				isset($tokens[$k-1]) and
+				is_array($tokens[$k-1]) and
+				$tokens[$k-1][0] === T_COMMENT
+			) {
+				$comment = " * ".trim(ltrim(trim($tokens[$k-1][1]), "/#"))."\n".$comment;
+				--$k;
+				++$replace;
+			}
+
+			if (!$comment) $comment = " *\n";
+
+			array_splice($tokens, $k, $replace, array(
 					array(T_DOC_COMMENT, "/**\n".
-						" *\n".
+						$comment.
 						" */"),
 					array(T_WHITESPACE, "\n")
 				));
+
 		}
 
 	}

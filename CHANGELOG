@@ -1,5 +1,10 @@
 phptidy Changelog
 
+Version 2.9 (2009-01-07)
+- Support for opening curly braces in new lines
+- Optional skipping of not wanted cleanup functions
+- Reuse existing comments for new function docblocks
+
 Version 2.8 (2008-05-22)
 - README
 - Display of a usage message
