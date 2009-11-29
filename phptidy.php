@@ -78,9 +78,10 @@ $open_tag = "<?php";
 $encoding = "";
 
 // Docroot-Variables
-// phptidy will strip these variables from the beginning of include and require
-// commands to generate appropriate @see tags also for these files.
-// Example: array('$docroot', '$GLOBALS[\'docroot\']');
+// phptidy will strip these variables and constants from the beginning of
+// include and require commands to generate appropriate @see tags also for
+// these files.
+// Example: array('DOCROOT', '$docroot', '$GLOBALS[\'docroot\']');
 $docrootvars = array();
 
 // Enable the single cleanup functions
@@ -781,7 +782,9 @@ function fix_builtin_functions_case(&$tokens) {
 		if (
 			is_string($token) or
 			$token[0] !== T_STRING or
-			!isset($tokens[$key+2])
+			!isset($tokens[$key+2]) or
+			// Ignore object methods
+			(is_array($tokens[$key-1]) and $tokens[$key-1][0] === T_OBJECT_OPERATOR)
 		) continue;
 
 		if (
@@ -1581,6 +1584,9 @@ function indent_text(&$tokens, $key, $curly_braces_count, $round_braces_count, $
 			is_array($tokens[$key+2]) and
 			$tokens[$key+2][0] === T_WHITESPACE and
 			strpos($tokens[$key+2][1], "\n")!==false
+		) and (
+			// Only if the curly brace belongs to a control structure
+			$control_structure[$curly_braces_count] > 0
 		)
 	) --$indent;
 
@@ -1797,9 +1803,9 @@ function find_includes(&$seetags, &$content, $file) {
 
 		if (!is_array($t[0])) continue;
 
-		// Strip leading docroot variable
+		// Strip leading docroot variable or constant
 		if (
-			$t[0][0] === T_VARIABLE and
+			($t[0][0] === T_VARIABLE or $t[0][0] === T_STRING) and
 			in_array($t[0][1], $GLOBALS['docrootvars']) and
 			$t[1] === "."
 		) {

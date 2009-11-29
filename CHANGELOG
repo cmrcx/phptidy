@@ -1,5 +1,10 @@
 phptidy Changelog
 
+Version 2.10 (2009-11-29)
+- Bugfix: Do not touch casing of object methods named like builtin functions
+- Bugfix: Indenting of opening curly braces without control structure
+- Allow constants as docroot variables
+
 Version 2.9 (2009-01-07)
 - Support for opening curly braces in new lines
 - Optional skipping of not wanted cleanup functions

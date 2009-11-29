@@ -105,7 +105,7 @@ To see what changes phptidy would make to your script, you can use phptidy's
 
   $ phptidy.php diff example.php
 
-If you are happy with the displayed changes, can now overwrite the original
+If you are happy with the displayed changes, you can now overwrite the original
 file with the tidy version by using the "replace" command:
 
   $ phptidy.php replace example.php
@@ -121,7 +121,7 @@ files as arguments:
 
 === Using config files ===
 
-If you have a project with many files you can write the list of files in a
+If you have a project with many files, you can write the list of files in a
 config file. Then you do not have to supply the list on the command line
 anymore. The config file has to be named ".phptidy-config.php" and has to be in
 the project's top level directory. To have the same effect as in the last
@@ -132,7 +132,7 @@ example the config file would have to have the following content:
 
 Then you can call phptidy without the files list:
 
-  $ phptidy replace
+  $ phptidy.php replace
 
 Please notice that when using config files, you always have to call phptidy
 from the project's top level directory where also the config file resides.
