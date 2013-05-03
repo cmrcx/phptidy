@@ -1,7 +1,7 @@
 phptidy Changelog
 
 Version 2.10 (2009-11-29)
-- Bugfix: Do not touch casing of object methods named like builtin functions
+- Bugfix: Do not touch casing of object methods named like built in functions
 - Bugfix: Indenting of opening curly braces without control structure
 - Allow constants as docroot variables
 
@@ -15,7 +15,7 @@ Version 2.8 (2008-05-22)
 - Display of a usage message
 - Better error messages and correct return codes
 - Check for required environment
-- Empty default author to avoid, that my name is beeing written in scripts by
+- Empty default author to avoid, that my name is being written in scripts by
   accident
 - Bugfix: Removing brackets from statements
 - Remove round brackets also from "break", "continue" and "echo"
