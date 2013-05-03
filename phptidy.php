@@ -89,21 +89,21 @@ $encoding = "";
 $docrootvars = array();
 
 // Enable the single cleanup functions
-$fix_token_case = true;
+$fix_token_case             = true;
 $fix_builtin_functions_case = true;
-$replace_inline_tabs = true;
-$replace_phptags = true;
-$replace_shell_comments = true;
-$fix_statement_brackets = true;
-$fix_separation_whitespace = true;
-$fix_comma_space = true;
-$add_file_docblock = true;
-$add_function_docblocks = true;
-$add_doctags = true;
-$fix_docblock_format = true;
-$fix_docblock_space = true;
-$add_blank_lines = true;
-$indent = true;
+$replace_inline_tabs        = true;
+$replace_phptags            = true;
+$replace_shell_comments     = true;
+$fix_statement_brackets     = true;
+$fix_separation_whitespace  = true;
+$fix_comma_space            = true;
+$add_file_docblock          = true;
+$add_function_docblocks     = true;
+$add_doctags                = true;
+$fix_docblock_format        = true;
+$fix_docblock_space         = true;
+$add_blank_lines            = true;
+$indent                     = true;
 
 ///////////// END OF DEFAULT CONFIGURATION ////////////////
 
@@ -429,14 +429,14 @@ function phptidy($source) {
 	}
 
 	// Simple formatting
-	if ($GLOBALS['fix_token_case']) fix_token_case($tokens);
+	if ($GLOBALS['fix_token_case'])             fix_token_case($tokens);
 	if ($GLOBALS['fix_builtin_functions_case']) fix_builtin_functions_case($tokens);
-	if ($GLOBALS['replace_inline_tabs']) replace_inline_tabs($tokens);
-	if ($GLOBALS['replace_phptags']) replace_phptags($tokens);
-	if ($GLOBALS['replace_shell_comments']) replace_shell_comments($tokens);
-	if ($GLOBALS['fix_statement_brackets']) fix_statement_brackets($tokens);
-	if ($GLOBALS['fix_separation_whitespace']) fix_separation_whitespace($tokens);
-	if ($GLOBALS['fix_comma_space']) fix_comma_space($tokens);
+	if ($GLOBALS['replace_inline_tabs'])        replace_inline_tabs($tokens);
+	if ($GLOBALS['replace_phptags'])            replace_phptags($tokens);
+	if ($GLOBALS['replace_shell_comments'])     replace_shell_comments($tokens);
+	if ($GLOBALS['fix_statement_brackets'])     fix_statement_brackets($tokens);
+	if ($GLOBALS['fix_separation_whitespace'])  fix_separation_whitespace($tokens);
+	if ($GLOBALS['fix_comma_space'])            fix_comma_space($tokens);
 
 	// PhpDocumentor
 	if ($GLOBALS['add_doctags']) {
@@ -445,13 +445,13 @@ function phptidy($source) {
 		//print_r($paramtags);
 		//print_r($returntags);
 	}
-	if ($GLOBALS['add_file_docblock']) add_file_docblock($tokens);
+	if ($GLOBALS['add_file_docblock'])      add_file_docblock($tokens);
 	if ($GLOBALS['add_function_docblocks']) add_function_docblocks($tokens);
 	if ($GLOBALS['add_doctags']) {
 		add_doctags($tokens, $usestags, $paramtags, $returntags, $GLOBALS['seetags']);
 	}
 	if ($GLOBALS['fix_docblock_format']) fix_docblock_format($tokens);
-	if ($GLOBALS['fix_docblock_space']) fix_docblock_space($tokens);
+	if ($GLOBALS['fix_docblock_space'])  fix_docblock_space($tokens);
 
 	if ($GLOBALS['add_blank_lines']) add_blank_lines($tokens);
 
