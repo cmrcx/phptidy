@@ -53,7 +53,8 @@ phptidy is released under the GPL and can be used for free.
  Optional:
 
 - diff
-    The standard Unix diff utility
+    The standard Unix diff utility or similar
+    Default is to use colordiff.
     Only required if you want to use phptidy's "diff" command.
 
 - PHP extension: mbstring
@@ -62,8 +63,7 @@ phptidy is released under the GPL and can be used for free.
     check the encoding of your PHP files.
 
  phptidy should work on most operation systems where PHP works. I use it in
- Linux and I have confirmations that it works on MacOS X. Some people use it
- even on Windows.
+ Linux and MacOS X. Some people use it also on Windows.
 
 
 === Installation ===

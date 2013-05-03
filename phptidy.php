@@ -44,6 +44,10 @@ $project_files = array();
 // Example: array("inc/external_lib.php");
 $project_files_excludes = array();
 
+// diff command
+// Examples: "diff", "colordiff", "diff -u", "colordiff -u"
+$diff = "colordiff -u";
+
 // The automatically added author in the phpdoc file docblocks
 // If left empty no new @author doctags will be added.
 // Example: "Your Name <you@example.com>"
@@ -285,7 +289,7 @@ foreach ( $files as $file ) {
 			echo "Error: The temporary file '".$tmpfile."' could not be saved.\n";
 			exit(1);
 		}
-		system("echo -ne '\\033[01;31m'; diff -u ".$file." ".$tmpfile." 2>&1; echo -ne '\\033[00m'");
+		system($diff." ".$file." ".$tmpfile." 2>&1");
 	}
 
 	// Process source code
@@ -346,7 +350,7 @@ foreach ( $files as $file ) {
 			echo "Error: The temporary file '".$tmpfile."' could not be saved.\n";
 			exit(1);
 		}
-		system("echo -ne '\\033[01;34m'; diff -u ".$file." ".$tmpfile." 2>&1; echo -ne '\\033[00m'");
+		system($diff." ".$file." ".$tmpfile." 2>&1");
 
 		break;
 	case "source":
