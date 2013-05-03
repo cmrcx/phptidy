@@ -2,6 +2,7 @@ phptidy Changelog
 
 - Configurable diff command
 - Tested on MacOS X
+- Handle anonymous functions
 
 Version 2.10 (2009-11-29)
 - Bugfix: Do not touch casing of object methods named like built in functions

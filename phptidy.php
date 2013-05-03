@@ -1340,7 +1340,11 @@ function add_blank_lines(&$tokens) {
 
 			// Remember the type of control structure
 			if ( in_array($token[0], array(T_IF, T_ELSEIF, T_WHILE, T_FOR, T_FOREACH, T_SWITCH, T_FUNCTION, T_CLASS)) ) {
-				$control_structure = $token[0];
+				if ( $token[0] === T_FUNCTION and isset($tokens[$key+1]) and $tokens[$key+1] === "(" ) {
+					$control_structure = "anonymous_function";
+				} else {
+					$control_structure = $token[0];
+				}
 				continue;
 			}
 
@@ -1987,6 +1991,9 @@ function collect_doctags(&$tokens) {
 
 				$k = $key + 1;
 
+				// Anonymous function
+				if ( $tokens[$k] === "(" ) break;
+
 				if ( is_string($tokens[$k]) or $tokens[$k][0] !== T_WHITESPACE ) {
 					possible_syntax_error($tokens, $k, "No whitespace found between function keyword and function name");
 					break;
@@ -2195,6 +2202,9 @@ function add_function_docblocks(&$tokens) {
 	foreach ( $tokens as $key => &$token ) {
 
 		if ( is_string($token) or $token[0] !== T_FUNCTION ) continue;
+
+		// No DocBlock for anonymous functions
+		if ( isset($tokens[$key+1]) and $tokens[$key+1]==="(" ) continue;
 
 		// Find beginning of the function declaration
 		$k = $key;
