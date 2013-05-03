@@ -1,7 +1,0 @@
-phptidy TODO
-
-- Class DocBlocks
-- Repair existing DocTags
-- Check see-Tags and remove them if necessary
-- Make the resulting format more configurable
-- Insert doctags in the right order into the existing ones
