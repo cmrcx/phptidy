@@ -7,7 +7,7 @@
  *
  * PHP version >= 5.0
  *
- * @copyright 2003-2008 Magnus Rosenbaum
+ * @copyright 2003-2013 Magnus Rosenbaum
  * @license   GPL v2
  *
  * This program is free software; you can redistribute it and/or
@@ -24,7 +24,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * @version 2.9 (2009-01-07)
+ * @version 2.11 (2013-05-07)
  * @author  Magnus Rosenbaum <phptidy@cmr.cx>
  * @package phptidy
  */

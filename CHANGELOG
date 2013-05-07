@@ -1,5 +1,6 @@
 phptidy Changelog
 
+Version 2.11 (2013-05-07)
 - Configurable diff command
 - Tested on MacOS X
 - Handle anonymous functions
