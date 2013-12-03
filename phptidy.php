@@ -1194,7 +1194,8 @@ function fix_docblock_format(&$tokens) {
 
 		if ( is_string($token) or $token[0] !== T_DOC_COMMENT ) continue;
 
-		$lines_orig = explode("\n", $tokens[$key][1]);
+		$content = trim(strtr($tokens[$key][1], array("/**"=>"", "*/"=>"")));
+		$lines_orig = explode("\n", $content);
 
 		$lines = array();
 		$comments_started = false;
@@ -1203,34 +1204,32 @@ function fix_docblock_format(&$tokens) {
 		$param_max_variable_length = 0;
 		foreach ( $lines_orig as $line ) {
 			$line = trim($line);
+
 			// Strip empty lines
 			if ($line=="") continue;
-			if ($line!="/**" and $line!="*/") {
 
-				// Add stars where missing
-				if (substr($line, 0, 1)!="*") $line = "* ".$line;
-				elseif ($line!="*" and substr($line, 0, 2)!="* ") $line = "* ".substr($line, 1);
+			// Add stars where missing
+			if (substr($line, 0, 1)!="*") $line = "* ".$line;
+			elseif ($line!="*" and substr($line, 0, 2)!="* ") $line = "* ".substr($line, 1);
 
-				// Strip empty lines at the beginning
-				if (!$comments_started) {
-					if ($line=="*" and count($lines_orig)>3) continue;
-					$comments_started = true;
+			// Strip empty lines at the beginning
+			if (!$comments_started) {
+				if ($line=="*" and count($lines_orig)>1) continue;
+				$comments_started = true;
+			}
+
+			if (substr($line, 0, 3)=="* @") {
+
+				// Add empty line before DocTags if missing
+				if (!$doctags_started) {
+					if ($last_line!="*") $lines[] = "*";
+					if ($last_line=="/**") $lines[] = "*";
+					$doctags_started = true;
 				}
 
-				if (substr($line, 0, 3)=="* @") {
-
-					// Add empty line before DocTags if missing
-					if (!$doctags_started) {
-						if ($last_line!="*") $lines[] = "*";
-						if ($last_line=="/**") $lines[] = "*";
-						$doctags_started = true;
-					}
-
-					// DocTag format
-					if ( preg_match('/^\* @param(\s+[^\s\$]*)?\s+(&?\$[^\s]+)/', $line, $matches) ) {
-						$param_max_variable_length = max($param_max_variable_length, strlen($matches[2]));
-					}
-
+				// DocTag format
+				if ( preg_match('/^\* @param(\s+[^\s\$]*)?\s+(&?\$[^\s]+)/', $line, $matches) ) {
+					$param_max_variable_length = max($param_max_variable_length, strlen($matches[2]));
 				}
 
 			}
@@ -1252,7 +1251,7 @@ function fix_docblock_format(&$tokens) {
 
 		}
 
-		$token[1] = join("\n", $lines);
+		$token[1] = "/**\n".join("\n", $lines)."\n*/";
 
 	}
 
