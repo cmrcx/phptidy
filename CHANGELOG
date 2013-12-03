@@ -1,5 +1,8 @@
 phptidy Changelog
 
+Version 2.12 (2013-12-03)
+- Bugfix: Handle docblocks with content in the same line after "/**"
+
 Version 2.11 (2013-05-07)
 - Configurable diff command
 - Tested on MacOS X
