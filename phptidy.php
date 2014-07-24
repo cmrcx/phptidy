@@ -1483,7 +1483,13 @@ function indent(&$tokens) {
 				)
 			) or (
 				is_array($token) and (
-					$token[0] === T_ELSE or $token[0] === T_DO
+					(
+						$token[0] === T_ELSE and ! (
+							// Ignore the "else" in "else if" to avoid indenting twice
+							is_array($tokens[$key+1]) and $tokens[$key+1][0] === T_WHITESPACE and
+							is_array($tokens[$key+2]) and $tokens[$key+2][0] === T_IF
+						)
+					) or $token[0] === T_DO
 				)
 			)
 		) {
