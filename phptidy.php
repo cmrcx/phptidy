@@ -1194,6 +1194,9 @@ function fix_docblock_format(&$tokens) {
 
 		if ( is_string($token) or $token[0] !== T_DOC_COMMENT ) continue;
 
+		// Don't touch one line docblocks
+		if ( strpos($token[1], "\n")===false ) continue;
+
 		$content = trim(strtr($tokens[$key][1], array("/**"=>"", "*/"=>"")));
 		$lines_orig = explode("\n", $content);
 
@@ -1270,6 +1273,9 @@ function fix_docblock_space(&$tokens) {
 	foreach ( $tokens as $key => &$token ) {
 
 		if ( is_string($token) or $token[0] !== T_DOC_COMMENT ) continue;
+
+		// Don't touch one line docblocks
+		if ( strpos($token[1], "\n")===false ) continue;
 
 		if ( $filedocblock ) {
 
