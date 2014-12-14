@@ -2127,9 +2127,28 @@ function add_file_docblock(&$tokens) {
 	$default_file_docblock .= " * @package ".$GLOBALS['default_package']."\n".
 		" */";
 
-	// File begins with PHP
-	switch ($tokens[0][0]) {
-	case T_OPEN_TAG:
+	if (!isset($tokens[0][0])) {
+		// File is empty
+
+		if ($GLOBALS['open_tag']=="<?") {
+			// Insert new file docblock
+			$tokens = array(
+				array(T_OPEN_TAG, "<?"),
+				array(T_WHITESPACE, "\n"),
+				array(T_DOC_COMMENT, $default_file_docblock),
+				array(T_WHITESPACE, "\n")
+			);
+		} else {
+			// Insert new file docblock
+			$tokens = array(
+				array(T_OPEN_TAG, $GLOBALS['open_tag']."\n"),
+				array(T_DOC_COMMENT, $default_file_docblock),
+				array(T_WHITESPACE, "\n")
+			);
+		}
+
+	} elseif ($tokens[0][0]==T_OPEN_TAG) {
+		// File begins with PHP
 
 		if ($GLOBALS['open_tag']=="<?") {
 			if ( $tokens[1][0] === T_WHITESPACE and $tokens[2][0] === T_DOC_COMMENT ) return;
@@ -2150,8 +2169,7 @@ function add_file_docblock(&$tokens) {
 				));
 		}
 
-		break;
-	case T_INLINE_HTML:
+	} elseif ($tokens[0][0]==T_INLINE_HTML) {
 
 		if ( preg_match("/^#!\//", $tokens[0][1]) ) {
 			// File begins with "shebang"-line for direct execution
@@ -2279,9 +2297,10 @@ function add_doctags(&$tokens, $usetags, $paramtags, $returntags, $seetags) {
 		if ($id != T_DOC_COMMENT) continue;
 
 		$k = $key + 1;
-		while ( in_array($tokens[$k][0], array(T_WHITESPACE, T_STATIC, T_PUBLIC, T_PROTECTED, T_PRIVATE)) ) ++$k;
+		while ( isset($tokens[$k][0]) and in_array($tokens[$k][0], array(T_WHITESPACE, T_STATIC, T_PUBLIC, T_PROTECTED, T_PRIVATE)) ) ++$k;
 
 		if (
+			isset($tokens[$k+2][0]) and
 			$tokens[$k][0] === T_FUNCTION and
 			$tokens[$k+1][0] === T_WHITESPACE and
 			$tokens[$k+2][0] === T_STRING

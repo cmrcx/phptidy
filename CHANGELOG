@@ -2,6 +2,7 @@ phptidy Changelog
 
 Version 2.13
 - Don't touch one line docblocks
+- Handle empty files
 
 Version 2.12 (2013-12-03)
 - Bugfix: Handle docblocks with content in the same line after "/**"
