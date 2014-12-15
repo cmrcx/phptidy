@@ -1404,6 +1404,8 @@ function indent(&$tokens) {
 	$curly_braces_count = 0;
 	// Level of round brackets
 	$round_braces_count = 0;
+	// Level of square brackets
+	$square_braces_count = 0;
 
 	$round_brace_opener = false;
 	$round_braces_control = 0;
@@ -1440,6 +1442,7 @@ function indent(&$tokens) {
 				) {
 					if     ($tokens[$key+1] === "}") --$curly_braces_count;
 					elseif ($tokens[$key+1] === ")") --$round_braces_count;
+					elseif ($tokens[$key+1] === "]") --$square_braces_count;
 				}
 			} else {
 				if (
@@ -1450,6 +1453,7 @@ function indent(&$tokens) {
 				) {
 					if     ($tokens[$key+2] === "}") --$curly_braces_count;
 					elseif ($tokens[$key+2] === ")") --$round_braces_count;
+					elseif ($tokens[$key+2] === "]") --$square_braces_count;
 				}
 			}
 		}
@@ -1457,7 +1461,11 @@ function indent(&$tokens) {
 		if     ($token === "(") ++$round_braces_control;
 		elseif ($token === ")") --$round_braces_control;
 
-		if ( $token === "(" ) {
+		if ( $token === "[" ) {
+
+			++$square_braces_count;
+
+		} elseif ( $token === "(" ) {
 
 			if ($round_braces_control==1) {
 				// Remember which command was before the bracket
@@ -1515,7 +1523,7 @@ function indent(&$tokens) {
 				$tokens,
 				$key,
 				$curly_braces_count,
-				$round_braces_count,
+				$round_braces_count + $square_braces_count,
 				$control_structure,
 				(is_array($token) and $token[0] === T_DOC_COMMENT),
 				$trinity_started
