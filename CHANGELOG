@@ -1,6 +1,7 @@
 phptidy Changelog
 
-Version 2.13
+Version 2.13 (2014-12-29)
+- Indent "else if" correctly
 - Don't touch one line docblocks
 - Handle empty files
 - Indent square brackets for new array style
