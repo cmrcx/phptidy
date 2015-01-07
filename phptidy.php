@@ -97,6 +97,7 @@ $replace_shell_comments     = true;
 $fix_statement_brackets     = true;
 $fix_separation_whitespace  = true;
 $fix_comma_space            = true;
+$fix_round_bracket_space    = false;
 $add_file_docblock          = true;
 $add_function_docblocks     = true;
 $add_doctags                = true;
@@ -437,6 +438,7 @@ function phptidy($source) {
 	if ($GLOBALS['fix_statement_brackets'])     fix_statement_brackets($tokens);
 	if ($GLOBALS['fix_separation_whitespace'])  fix_separation_whitespace($tokens);
 	if ($GLOBALS['fix_comma_space'])            fix_comma_space($tokens);
+	if ($GLOBALS['fix_round_bracket_space'])    fix_round_bracket_space($tokens);
 
 	// PhpDocumentor
 	if ($GLOBALS['add_doctags']) {
@@ -1155,6 +1157,45 @@ function separation_whitespace($control_structure) {
 		)
 	) return "\n";
 	return " ";
+}
+
+
+/**
+ * Adds one space after a round bracket
+ *
+ * @param array   $tokens (reference)
+ */
+function fix_round_bracket_space(&$tokens) {
+
+	foreach ($tokens as $key => &$token) {
+		if (!is_string($token)) continue;
+		if (
+			// If the current token is a start round bracket...
+			$token === "(" and
+			// ...and the next token is no whitespace
+			!( isset($tokens[$key+1][0] ) and $tokens[$key+1][0] === T_WHITESPACE ) and
+			// ...and the next token is not an end round bracket
+			!( isset($tokens[$key+1][0] ) and $tokens[$key+1][0] === ')' )
+		) {
+			// Insert one space
+			array_splice( $tokens, $key+1, 0, array(
+					array(T_WHITESPACE, " ")
+				));
+		}
+		else if (
+			// If the current token is an end round bracket...
+			$token === ")" and
+			// ...and the previous token is no whitespace
+			!( isset( $tokens[$key-1][0] ) and $tokens[$key-1][0] === T_WHITESPACE ) and
+			// ...and the previous token is a start round bracket
+			!( isset( $tokens[$key-1][0] ) and $tokens[$key-1][0] === '(' )
+		) {
+			// Insert one space
+			array_splice( $tokens, $key, 0, array(
+					array( T_WHITESPACE, " " )
+				));
+		}
+	}
 }
 
 
