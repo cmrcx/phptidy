@@ -1195,7 +1195,7 @@ function fix_round_bracket_space(&$tokens) {
 				));
 		}
 	}
-	
+
 }
 
 
