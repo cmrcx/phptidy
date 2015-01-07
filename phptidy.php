@@ -1161,7 +1161,7 @@ function separation_whitespace($control_structure) {
 
 
 /**
- * Adds one space after a round bracket
+ * Adds one space after an opening and before a closing round bracket
  *
  * @param array   $tokens (reference)
  */
@@ -1170,32 +1170,32 @@ function fix_round_bracket_space(&$tokens) {
 	foreach ($tokens as $key => &$token) {
 		if (!is_string($token)) continue;
 		if (
-			// If the current token is a start round bracket...
+			// If the current token is an opening round bracket...
 			$token === "(" and
 			// ...and the next token is no whitespace
-			!( isset($tokens[$key+1][0] ) and $tokens[$key+1][0] === T_WHITESPACE ) and
-			// ...and the next token is not an end round bracket
-			!( isset($tokens[$key+1][0] ) and $tokens[$key+1][0] === ')' )
+			!( isset($tokens[$key+1][0]) and $tokens[$key+1][0] === T_WHITESPACE ) and
+			// ...and the next token is not a closing round bracket
+			!( isset($tokens[$key+1][0]) and $tokens[$key+1][0] === ')' )
 		) {
 			// Insert one space
-			array_splice( $tokens, $key+1, 0, array(
+			array_splice($tokens, $key+1, 0, array(
 					array(T_WHITESPACE, " ")
 				));
-		}
-		else if (
+		} elseif (
 			// If the current token is an end round bracket...
 			$token === ")" and
 			// ...and the previous token is no whitespace
-			!( isset( $tokens[$key-1][0] ) and $tokens[$key-1][0] === T_WHITESPACE ) and
-			// ...and the previous token is a start round bracket
-			!( isset( $tokens[$key-1][0] ) and $tokens[$key-1][0] === '(' )
+			!( isset($tokens[$key-1][0]) and $tokens[$key-1][0] === T_WHITESPACE ) and
+			// ...and the previous token is not an opening round bracket
+			!( isset($tokens[$key-1][0]) and $tokens[$key-1][0] === '(' )
 		) {
 			// Insert one space
-			array_splice( $tokens, $key, 0, array(
-					array( T_WHITESPACE, " " )
+			array_splice($tokens, $key, 0, array(
+					array(T_WHITESPACE, " ")
 				));
 		}
 	}
+	
 }
 
 
