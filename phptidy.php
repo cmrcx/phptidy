@@ -150,6 +150,7 @@ case "--help":
 case "-h":
 	usage();
 	exit;
+case "print":
 case "suffix":
 case "replace":
 case "diff":
@@ -342,6 +343,10 @@ foreach ( $files as $file ) {
 
 	// Output
 	switch ($command) {
+	case "print":
+
+        print $source;
+		break;
 	case "suffix":
 
 		$newfile = $file.".phptidy.php";
@@ -413,6 +418,7 @@ function usage() {
 Usage: phptidy.php command [files|options]
 
 Commands:
+  print    Print formatted file to stdout. Use this option if you are integrating phptidy with other programs
   suffix   Write output into files with suffix .phptidy.php
   replace  Replace files and backup original as .phptidybak
   diff     Show diff between old and new source
