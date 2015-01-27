@@ -166,6 +166,7 @@ case "":
 
 // Get options
 $verbose = false;
+$external_config_file = false;
 foreach ( $options as $option ) {
 	switch ($option) {
 	case "-v":
@@ -173,6 +174,18 @@ foreach ( $options as $option ) {
 		$verbose = true;
 		continue 2;
 	}
+	// split on = sign
+	$option_array = explode('=', $option);
+	if (count($option_array) == 2) {
+		switch ($option_array[0]) {
+		case "-c":
+		case "-config":
+			$external_config_file = $option_array[1];
+			continue 2;
+			break;
+		}
+	}
+
 	echo "Unknown option: '".$option."'\n";
 	usage();
 	exit(1);
@@ -184,6 +197,12 @@ if ( file_exists(CONFIGFILE) ) {
 	require CONFIGFILE;
 } else {
 	echo "Running without configuration file\n";
+}
+
+// Load external config file if present
+if ( $external_config_file && file_exists($external_config_file)) {
+	display("Using external config file " . $external_config_file . "\n");
+	require $external_config_file;
 }
 
 // Files from config file
