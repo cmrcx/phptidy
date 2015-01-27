@@ -166,6 +166,7 @@ case "":
 
 // Get options
 $verbose = false;
+$quiet = false;
 $external_config_file = false;
 foreach ( $options as $option ) {
 	switch ($option) {
@@ -173,6 +174,12 @@ foreach ( $options as $option ) {
 	case "--verbose":
 		$verbose = true;
 		continue 2;
+		break;
+	case "-q":
+	case "--quiet":
+		$quiet = true;
+		continue 2;
+		break;
 	}
 	// split on = sign
 	$option_array = explode('=', $option);
@@ -193,10 +200,10 @@ foreach ( $options as $option ) {
 
 // Load config file
 if ( file_exists(CONFIGFILE) ) {
-	echo "Using configuration file ".CONFIGFILE."\n";
+	display("Using configuration file ".CONFIGFILE."\n");
 	require CONFIGFILE;
 } else {
-	echo "Running without configuration file\n";
+	display("Running without configuration file\n");
 }
 
 // Load external config file if present
@@ -247,7 +254,7 @@ if ($command=="files") {
 
 // Read cache file
 if ( file_exists(CACHEFILE) ) {
-	echo "Using cache file ".CACHEFILE."\n";
+	display("Using cache file ".CACHEFILE."\n");
 	$cache = unserialize(file_get_contents(CACHEFILE));
 	$cache_orig = $cache;
 } else {
@@ -258,16 +265,16 @@ if ( file_exists(CACHEFILE) ) {
 }
 
 // Find functions and includes
-echo "Find functions and includes ";
+display("Find functions and includes ");
 $functions = array();
 $seetags = array();
 foreach ( $files as $file ) {
-	echo ".";
+	display(".");
 	$source = file_get_contents($file);
 	$functions = array_unique(array_merge($functions, get_functions($source)));
 	find_includes($seetags, $source, $file);
 }
-echo "\n";
+display("\n");
 //print_r($functions);
 //print_r($seetags);
 
@@ -285,11 +292,11 @@ if ( !extension_loaded("tokenizer") ) {
 	exit(1);
 }
 
-echo "Process files\n";
+display("Process files\n");
 $replaced = 0;
 foreach ( $files as $file ) {
 
-	echo " ".$file."\n";
+	display(" ".$file."\n");
 	$source_orig = file_get_contents($file);
 
 	// Cache
@@ -302,7 +309,7 @@ foreach ( $files as $file ) {
 
 	// Check encoding
 	if ($encoding and !mb_check_encoding($source_orig, $encoding)) {
-		echo "  File contains characters which are not valid in ".$encoding.":\n";
+		display("  File contains characters which are not valid in ".$encoding.":\n");
 		$source_converted = mb_convert_encoding($source_orig, $encoding);
 		$tmpfile = "/tmp/tmp.phptidy.php";
 		if ( !file_put_contents($tmpfile, $source_converted) ) {
@@ -320,7 +327,7 @@ foreach ( $files as $file ) {
 		$source = phptidy($source_in);
 		++$count;
 		if ($count > 3) {
-			echo "  Code processed 3 times and still not consistent!\n";
+			display("  Code processed 3 times and still not consistent!\n");
 			break;
 		}
 	} while ( $source != $source_in );
@@ -342,7 +349,7 @@ foreach ( $files as $file ) {
 			echo "Error: The file '".$newfile."' could not be saved.\n";
 			exit(1);
 		}
-		echo "  ".$newfile." saved.\n";
+		display("  ".$newfile." saved.\n");
 
 		break;
 	case "replace":
@@ -356,7 +363,7 @@ foreach ( $files as $file ) {
 			echo "Error: The file '".$file."' could not be overwritten.\n";
 			exit(1);
 		}
-		echo "  replaced.\n";
+		display("  replaced.\n");
 		++$replaced;
 
 		// Write new md5sum into cache
@@ -375,7 +382,7 @@ foreach ( $files as $file ) {
 		break;
 	case "source":
 
-		echo $source;
+		display($source);
 
 		break;
 	}
@@ -384,12 +391,12 @@ foreach ( $files as $file ) {
 
 if ($command=="replace") {
 	if ($replaced) {
-		echo "Replaced ".$replaced." files.\n";
+		display("Replaced ".$replaced." files.\n");
 	}
 	if ($cache != $cache_orig) {
-		echo "Write cache file ".CACHEFILE."\n";
+		display("Write cache file ".CACHEFILE."\n");
 		if ( !file_put_contents(CACHEFILE, serialize($cache)) ) {
-			echo "Warning: The cache file '".CACHEFILE."' could not be saved.\n";
+			display("Warning: The cache file '".CACHEFILE."' could not be saved.\n");
 		}
 	}
 }
@@ -416,6 +423,7 @@ Commands:
 
 Options:
   -v       Verbose messages
+  -q       Quiet messages
 
 If no files are supplied on command line, they will be read from the config
 file.
@@ -423,6 +431,17 @@ file.
 See README and source comments for more information.
 
 ";
+}
+
+/**
+ * Display the message when verbose is enabled or quiet is disabled.
+ *
+ * @param string $msg Message to be printed.
+ */
+function display($msg) {
+	if ($GLOBALS['verbose'] || ! $GLOBALS['quiet']) {
+		echo $msg;
+	}
 }
 
 
@@ -523,10 +542,10 @@ function token_text($token) {
 function print_tokens($tokens) {
 	foreach ( $tokens as $token ) {
 		if (is_string($token)) {
-			echo $token."\n";
+			display($token."\n");
 		} else {
 			list($id, $text) = $token;
-			echo token_name($id)." ".addcslashes($text, "\0..\40!@\@\177..\377")."\n";
+			display(token_name($id)." ".addcslashes($text, "\0..\40!@\@\177..\377")."\n");
 		}
 	}
 }
@@ -574,10 +593,10 @@ function combine_tokens($tokens) {
  * @param string  $message (optional)
  */
 function possible_syntax_error($tokens, $key, $message="") {
-	echo "Possible syntax error detected";
+	display("Possible syntax error detected");
 	if ($message) echo " (".$message.")";
-	echo ":\n";
-	echo combine_tokens(array_slice($tokens, max(0, $key-5), 10))."\n";
+	display(":\n");
+	display(combine_tokens(array_slice($tokens, max(0, $key-5), 10))."\n");
 }
 
 
