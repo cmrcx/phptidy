@@ -345,7 +345,7 @@ foreach ( $files as $file ) {
 	switch ($command) {
 	case "print":
 
-        print $source;
+		print $source;
 		break;
 	case "suffix":
 
@@ -439,10 +439,11 @@ See README and source comments for more information.
 ";
 }
 
+
 /**
  * Display the message when verbose is enabled or quiet is disabled.
  *
- * @param string $msg Message to be printed.
+ * @param string  $msg Message to be printed.
  */
 function display($msg) {
 	if ($GLOBALS['verbose'] || ! $GLOBALS['quiet']) {
