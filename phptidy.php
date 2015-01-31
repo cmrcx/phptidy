@@ -181,18 +181,16 @@ foreach ( $options as $option ) {
 		continue 2;
 		break;
 	}
-	// split on = sign
 	$option_array = explode('=', $option);
 	if (count($option_array) == 2) {
 		switch ($option_array[0]) {
 		case "-c":
-		case "-config":
+		case "--config":
 			$external_config_file = $option_array[1];
 			continue 2;
 			break;
 		}
 	}
-
 	error("Unknown option: '".$option."'", true);
 }
 
@@ -417,8 +415,9 @@ Commands:
   help     Display this message
 
 Options:
-  -v       Verbose messages
-  -q       Quiet messages
+  -c=FILE, --config=FILE  Config file to be used
+  -v,      --verbose      Verbose messages
+  -q,      --quiet        Display only error messages
 
 If no files are supplied on command line, they will be read from the config
 file.
