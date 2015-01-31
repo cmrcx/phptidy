@@ -174,12 +174,10 @@ foreach ( $options as $option ) {
 	case "--verbose":
 		$verbose = true;
 		continue 2;
-		break;
 	case "-q":
 	case "--quiet":
 		$quiet = true;
 		continue 2;
-		break;
 	}
 	$option_array = explode('=', $option);
 	if (count($option_array) == 2) {
@@ -188,7 +186,6 @@ foreach ( $options as $option ) {
 		case "--config":
 			$external_config_file = $option_array[1];
 			continue 2;
-			break;
 		}
 	}
 	error("Unknown option: '".$option."'", true);
