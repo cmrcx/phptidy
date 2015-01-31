@@ -114,15 +114,14 @@ define('CACHEFILE', "./.phptidy-cache");
 
 
 error_reporting(E_ALL);
+ini_set('display_errors', 'stderr');
 
 if (!version_compare(phpversion(), "5.0", ">=")) {
-	echo "Error: phptidy requires PHP 5 or newer.\n";
-	exit(1);
+	error("phptidy requires PHP 5 or newer.");
 }
 
 if (php_sapi_name() != "cli") {
-	echo "Error: phptidy has to be run on command line with CLI SAPI\n";
-	exit(1);
+	error("phptidy has to be run on command line with CLI SAPI.");
 }
 
 
@@ -159,7 +158,7 @@ case "files":
 case "tokens":
 	break;
 default:
-	echo "Unknown command: '".$command."'\n";
+	error("Unknown command: '".$command."'", true);
 case "":
 	usage();
 	exit(1);
@@ -194,9 +193,7 @@ foreach ( $options as $option ) {
 		}
 	}
 
-	echo "Unknown option: '".$option."'\n";
-	usage();
-	exit(1);
+	error("Unknown option: '".$option."'", true);
 }
 
 // Load config file
@@ -216,8 +213,7 @@ if ( $external_config_file && file_exists($external_config_file)) {
 // Files from config file
 if (!count($files)) {
 	if (!count($project_files)) {
-		echo "Error: No files supplied on commandline and also no project files specified in config file\n";
-		exit(1);
+		error("No files supplied on commandline and also no project files specified in config file.");
 	}
 	foreach ( $project_files as $pf ) {
 		$files = array_unique(array_merge($files, glob($pf)));
@@ -242,8 +238,7 @@ foreach ( $files as $key => $file ) {
 		continue;
 	}
 	if ( !is_readable($file) or !is_file($file) ) {
-		echo "Error: File '".$file."' does not exist or is not readable\n";
-		exit(1);
+		error("File '".$file."' does not exist or is not readable.");
 	}
 }
 
@@ -289,8 +284,7 @@ if ( isset($cache['functions_seetags']) and $md5sum == $cache['functions_seetags
 }
 
 if ( !extension_loaded("tokenizer") ) {
-	echo "Error: The 'Tokenizer' extension for PHP is missing. See http://php.net/manual/en/book.tokenizer.php for more information.\n";
-	exit(1);
+	error("The 'Tokenizer' extension for PHP is missing. See http://php.net/manual/en/book.tokenizer.php for more information.");
 }
 
 display("Process files\n");
@@ -304,7 +298,7 @@ foreach ( $files as $file ) {
 	$md5sum = md5($source_orig);
 	if ( $use_cache and isset($cache['md5sums'][$file]) and $md5sum == $cache['md5sums'][$file] ) {
 		// Original file has not changed, so we don't process it
-		if ($verbose) echo "  File unchanged since last processing.\n";
+		if ($verbose) display("  File unchanged since last processing.\n");
 		continue;
 	}
 
@@ -314,8 +308,7 @@ foreach ( $files as $file ) {
 		$source_converted = mb_convert_encoding($source_orig, $encoding);
 		$tmpfile = "/tmp/tmp.phptidy.php";
 		if ( !file_put_contents($tmpfile, $source_converted) ) {
-			echo "Error: The temporary file '".$tmpfile."' could not be saved.\n";
-			exit(1);
+			error("The temporary file '".$tmpfile."' could not be saved.");
 		}
 		system($diff." ".$file." ".$tmpfile." 2>&1");
 	}
@@ -335,7 +328,7 @@ foreach ( $files as $file ) {
 
 	// Processing has not changed content of file
 	if ( $count == 1 ) {
-		if ($verbose) echo "  Processed without changes.\n";
+		if ($verbose) display("  Processed without changes.\n");
 		// Write md5sum of the unchanged file into cache
 		$cache['md5sums'][$file] = $md5sum;
 		continue;
@@ -351,8 +344,7 @@ foreach ( $files as $file ) {
 
 		$newfile = $file.".phptidy.php";
 		if ( !file_put_contents($newfile, $source) ) {
-			echo "Error: The file '".$newfile."' could not be saved.\n";
-			exit(1);
+			error("The file '".$newfile."' could not be saved.");
 		}
 		display("  ".$newfile." saved.\n");
 
@@ -361,12 +353,10 @@ foreach ( $files as $file ) {
 
 		$backupfile = dirname($file).(dirname($file)?"/":"").".".basename($file).".phptidybak~";
 		if ( !copy($file, $backupfile) ) {
-			echo "Error: The file '".$backupfile."' could not be saved.\n";
-			exit(1);
+			error("The file '".$backupfile."' could not be saved.");
 		}
 		if ( !file_put_contents($file, $source) ) {
-			echo "Error: The file '".$file."' could not be overwritten.\n";
-			exit(1);
+			error("The file '".$file."' could not be overwritten.");
 		}
 		display("  replaced.\n");
 		++$replaced;
@@ -379,8 +369,7 @@ foreach ( $files as $file ) {
 
 		$tmpfile = "/tmp/tmp.phptidy.php";
 		if ( !file_put_contents($tmpfile, $source) ) {
-			echo "Error: The temporary file '".$tmpfile."' could not be saved.\n";
-			exit(1);
+			error("The temporary file '".$tmpfile."' could not be saved.");
 		}
 		system($diff." ".$file." ".$tmpfile." 2>&1");
 
@@ -441,14 +430,26 @@ See README and source comments for more information.
 
 
 /**
- * Display the message when verbose is enabled or quiet is disabled.
+ * Display a message
  *
- * @param string  $msg Message to be printed.
+ * @param string  $msg Message with trailing linebreak
  */
 function display($msg) {
-	if ($GLOBALS['verbose'] || ! $GLOBALS['quiet']) {
-		echo $msg;
-	}
+	if ($GLOBALS['quiet']) return;
+	fwrite(STDERR, $msg);
+}
+
+
+/**
+ * Display an error message and exit
+ *
+ * @param string  $msg   Error message without trailing linebreak
+ * @param boolean $usage (optional) Display usage information
+ */
+function error($msg, $usage=false) {
+	fwrite(STDERR, "Error: ".$msg."\n");
+	if ($usage) usage();
+	exit(1);
 }
 
 
@@ -601,7 +602,7 @@ function combine_tokens($tokens) {
  */
 function possible_syntax_error($tokens, $key, $message="") {
 	display("Possible syntax error detected");
-	if ($message) echo " (".$message.")";
+	if ($message) display(" (".$message.")");
 	display(":\n");
 	display(combine_tokens(array_slice($tokens, max(0, $key-5), 10))."\n");
 }
