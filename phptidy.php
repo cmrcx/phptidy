@@ -192,17 +192,14 @@ foreach ( $options as $option ) {
 }
 
 // Load config file
-if ( file_exists(CONFIGFILE) ) {
+if ( $external_config_file ) {
+	display("Using external configuration file ".$external_config_file."\n");
+	require $external_config_file;
+} elseif ( file_exists(CONFIGFILE) ) {
 	display("Using configuration file ".CONFIGFILE."\n");
 	require CONFIGFILE;
 } else {
 	display("Running without configuration file\n");
-}
-
-// Load external config file if present
-if ( $external_config_file && file_exists($external_config_file)) {
-	display("Using external config file " . $external_config_file . "\n");
-	require $external_config_file;
 }
 
 // Files from config file
