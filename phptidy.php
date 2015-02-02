@@ -321,6 +321,12 @@ foreach ( $files as $file ) {
 		}
 	} while ( $source != $source_in );
 
+	// Output
+	if ($command == "print") {
+		echo $source;
+		continue;
+	}
+
 	// Processing has not changed content of file
 	if ( $count == 1 ) {
 		if ($verbose) display("  Processed without changes.\n");
@@ -331,10 +337,6 @@ foreach ( $files as $file ) {
 
 	// Output
 	switch ($command) {
-	case "print":
-
-		print $source;
-		break;
 	case "suffix":
 
 		$newfile = $file.".phptidy.php";
@@ -371,7 +373,7 @@ foreach ( $files as $file ) {
 		break;
 	case "source":
 
-		display($source);
+		echo $source;
 
 		break;
 	}
