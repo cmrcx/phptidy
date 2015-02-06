@@ -119,7 +119,9 @@ ini_set('display_errors', 'stderr');
 if (!version_compare(phpversion(), "5.0", ">=")) {
 	error("phptidy requires PHP 5 or newer.");
 }
-
+if (!extension_loaded("tokenizer")) {
+	error("The 'Tokenizer' extension for PHP is missing. See http://php.net/manual/en/book.tokenizer.php for more information.");
+}
 if (php_sapi_name() != "cli") {
 	error("phptidy has to be run on command line with CLI SAPI.");
 }
@@ -149,7 +151,7 @@ case "--help":
 case "-h":
 	usage();
 	exit;
-case "print":
+case "-":
 case "suffix":
 case "replace":
 case "diff":
@@ -200,6 +202,16 @@ if ( $external_config_file ) {
 	require CONFIGFILE;
 } else {
 	display("Running without configuration file\n");
+}
+
+// Read code from STDIN and write formatted code to STDOUT
+if ($command=="-") {
+	$file    = null; // Don't use a file name
+	$seetags = null; // Don't add any new seetags
+	$source = file_get_contents("php://stdin");
+	format($source);
+	echo $source;
+	exit;
 }
 
 // Files from config file
@@ -275,19 +287,15 @@ if ( isset($cache['functions_seetags']) and $md5sum == $cache['functions_seetags
 	$cache['functions_seetags'] = $md5sum;
 }
 
-if ( !extension_loaded("tokenizer") ) {
-	error("The 'Tokenizer' extension for PHP is missing. See http://php.net/manual/en/book.tokenizer.php for more information.");
-}
-
 display("Process files\n");
 $replaced = 0;
 foreach ( $files as $file ) {
 
 	display(" ".$file."\n");
-	$source_orig = file_get_contents($file);
+	$source = file_get_contents($file);
 
 	// Cache
-	$md5sum = md5($source_orig);
+	$md5sum = md5($source);
 	if ( $use_cache and isset($cache['md5sums'][$file]) and $md5sum == $cache['md5sums'][$file] ) {
 		// Original file has not changed, so we don't process it
 		if ($verbose) display("  File unchanged since last processing.\n");
@@ -295,9 +303,9 @@ foreach ( $files as $file ) {
 	}
 
 	// Check encoding
-	if ($encoding and !mb_check_encoding($source_orig, $encoding)) {
+	if ($encoding and !mb_check_encoding($source, $encoding)) {
 		display("  File contains characters which are not valid in ".$encoding.":\n");
-		$source_converted = mb_convert_encoding($source_orig, $encoding);
+		$source_converted = mb_convert_encoding($source, $encoding);
 		$tmpfile = "/tmp/tmp.phptidy.php";
 		if ( !file_put_contents($tmpfile, $source_converted) ) {
 			error("The temporary file '".$tmpfile."' could not be saved.");
@@ -306,23 +314,7 @@ foreach ( $files as $file ) {
 	}
 
 	// Process source code
-	$source = $source_orig;
-	$count = 0;
-	do {
-		$source_in = $source;
-		$source = phptidy($source_in);
-		++$count;
-		if ($count > 3) {
-			display("  Code processed 3 times and still not consistent!\n");
-			break;
-		}
-	} while ( $source != $source_in );
-
-	// Output
-	if ($command == "print") {
-		echo $source;
-		continue;
-	}
+	$count = format($source);
 
 	// Processing has not changed content of file
 	if ( $count == 1 ) {
@@ -401,13 +393,13 @@ function usage() {
 Usage: phptidy.php command [files|options]
 
 Commands:
-  print    Print formatted file to stdout. Use this option if you are integrating phptidy with other programs
   suffix   Write output into files with suffix .phptidy.php
   replace  Replace files and backup original as .phptidybak
   diff     Show diff between old and new source
-  source   Show processed source code of affected files
+  source   Show formatted source code of affected files
   files    Show files that would be processed
   tokens   Show source file tokens
+  -        Read code from STDIN and write formatted code to STDOUT
   help     Display this message
 
 Options:
@@ -449,12 +441,33 @@ function error($msg, $usage=false) {
 
 
 /**
- * Clean up source code
+ * Format source code repeatedly until it is consistent
  *
- * @param string  $source
- * @return string
+ * @param string  $source (reference) Source code
+ * @return integer       Number of repetitions
  */
-function phptidy($source) {
+function format(&$source) {
+	$count = 0;
+	do {
+		$source_in = $source;
+		$source = format_once($source_in);
+		++$count;
+		if ($count > 3) {
+			display("  Code formatted 3 times and still not consistent!\n");
+			break;
+		}
+	} while ( $source != $source_in );
+	return $count;
+}
+
+
+/**
+ * Format source code one time
+ *
+ * @param string  $source Original source code
+ * @return string         Formatted source code
+ */
+function format_once($source) {
 
 	// Replace non-Unix line breaks
 	// http://pear.php.net/manual/en/standards.file.php
@@ -2285,7 +2298,7 @@ function collect_doctags(&$tokens) {
 function add_file_docblock(&$tokens) {
 
 	$default_file_docblock = "/**\n".
-		" * ".$GLOBALS['file']."\n".
+		" *".($GLOBALS['file']?" ".$GLOBALS['file']:"")."\n".
 		" *\n";
 	if ($GLOBALS['default_author']) {
 		$default_file_docblock .= " * @author ".$GLOBALS['default_author']."\n";
