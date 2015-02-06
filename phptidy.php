@@ -101,6 +101,7 @@ $fix_round_bracket_space    = false;
 $add_file_docblock          = true;
 $add_function_docblocks     = true;
 $add_doctags                = true;
+$add_usestags               = false;
 $fix_docblock_format        = true;
 $fix_docblock_space         = true;
 $add_blank_lines            = true;
@@ -2460,12 +2461,12 @@ function add_function_docblocks(&$tokens) {
  * Add DocTags to file or function DocBlocks
  *
  * @param array   $tokens     (reference)
- * @param array   $usetags
+ * @param array   $usestags
  * @param array   $paramtags
  * @param array   $returntags
  * @param array   $seetags
  */
-function add_doctags(&$tokens, $usetags, $paramtags, $returntags, $seetags) {
+function add_doctags(&$tokens, $usestags, $paramtags, $returntags, $seetags) {
 
 	$filedocblock = false;
 
@@ -2493,14 +2494,14 @@ function add_doctags(&$tokens, $usetags, $paramtags, $returntags, $seetags) {
 			if (isset($returntags[$f])) {
 				$tokens[$key] = array($id, add_doctags_to_doc_comment($tokens[$key][1], "return", $returntags[$f]));
 			}
-			if (isset($usestags[$f])) {
+			if ($GLOBALS['add_usestags'] and isset($usestags[$f])) {
 				$tokens[$key] = array($id, add_doctags_to_doc_comment($tokens[$key][1], "uses", $usestags[$f]));
 			}
 
 		} elseif ( !$filedocblock ) {
 
 			// File DocBlock
-			if (isset($usestags[""])) {
+			if ($GLOBALS['add_usestags'] and isset($usestags[""])) {
 				$tokens[$key] = array($id, add_doctags_to_doc_comment($tokens[$key][1], "uses", $usestags[""]));
 			}
 			$tokens[$key] = array($id, add_doctags_to_doc_comment($tokens[$key][1], "author", array(array(""))));
