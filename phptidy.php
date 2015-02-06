@@ -539,7 +539,7 @@ function format_once($source) {
 
 
 /**
- * Returns the text part of a token
+ * Return the text part of a token
  *
  * @param mixed   $token
  * @return string
@@ -551,7 +551,7 @@ function token_text($token) {
 
 
 /**
- * Prints all tokens
+ * Print all tokens
  *
  * @param array   $tokens
  */
@@ -583,7 +583,7 @@ function get_tokens(&$source) {
 
 
 /**
- * Combines the tokens to the source code
+ * Combine the tokens to the source code
  *
  * @param array   $tokens
  * @return string
@@ -602,7 +602,7 @@ function combine_tokens($tokens) {
 
 
 /**
- * Displays a possible syntax error
+ * Display a possible syntax error
  *
  * @param array   $tokens
  * @param integer $key
@@ -617,7 +617,7 @@ function possible_syntax_error($tokens, $key, $message="") {
 
 
 /**
- * Removes whitespace from the beginning of a token array
+ * Remove whitespace from the beginning of a token array
  *
  * @param array   $tokens
  */
@@ -632,7 +632,7 @@ function tokens_ltrim(&$tokens) {
 
 
 /**
- * Removes whitespace from the end of a token array
+ * Remove whitespace from the end of a token array
  *
  * @param array   $tokens (reference)
  */
@@ -647,7 +647,7 @@ function tokens_rtrim(&$tokens) {
 
 
 /**
- * Removes all whitespace
+ * Remove all whitespace
  *
  * @param array   $tokens (reference)
  */
@@ -665,7 +665,7 @@ function strip_whitespace(&$tokens) {
 
 
 /**
- * Gets the argument of a statement
+ * Get the argument of a statement
  *
  * @param array   $tokens
  * @param integer $key    Key of the token of the command for which we want the argument
@@ -720,7 +720,7 @@ function get_argument_tokens(&$tokens, $key) {
 
 
 /**
- * Checks for some tokens which must not be touched
+ * Check for some tokens which must not be touched
  *
  * @param array   $token
  * @return boolean
@@ -740,7 +740,7 @@ function token_is_taboo(&$token) {
 
 
 /**
- * Converts commands to lower case
+ * Convert commands to lower case
  *
  * @param array   $tokens (reference)
  */
@@ -825,7 +825,7 @@ function fix_token_case(&$tokens) {
 
 
 /**
- * Converts builtin functions to lower case
+ * Convert builtin functions to lower case
  *
  * @param array   $tokens (reference)
  */
@@ -877,7 +877,7 @@ function fix_builtin_functions_case(&$tokens) {
 
 
 /**
- * Replaces inline tabs with spaces
+ * Replace inline tabs with spaces
  *
  * @param array   $tokens (reference)
  */
@@ -901,7 +901,7 @@ function replace_inline_tabs(&$tokens) {
 
 
 /**
- * Replaces PHP-Open-Tags with consistent tags
+ * Replace PHP-Open-Tags with consistent tags
  *
  * @param array   $tokens (reference)
  */
@@ -982,7 +982,7 @@ function replace_phptags(&$tokens) {
 
 
 /**
- * Replaces shell style comments with C style comments
+ * Replace shell style comments with C style comments
  *
  * http://pear.php.net/manual/en/standards.comments.php
  *
@@ -1004,7 +1004,7 @@ function replace_shell_comments(&$tokens) {
 
 
 /**
- * Enforces statements without brackets and fixes whitespace
+ * Enforce statements without brackets and fixes whitespace
  *
  * http://pear.php.net/manual/en/standards.including.php
  *
@@ -1083,7 +1083,7 @@ function fix_statement_brackets(&$tokens) {
 
 
 /**
- * Fixes whitespace between commands and braces
+ * Fixe whitespace between commands and braces
  *
  * @param array   $tokens (reference)
  */
@@ -1215,7 +1215,7 @@ function separation_whitespace($control_structure) {
 
 
 /**
- * Adds one space after an opening and before a closing round bracket
+ * Add one space after an opening and before a closing round bracket
  *
  * @param array   $tokens (reference)
  */
@@ -1254,7 +1254,7 @@ function fix_round_bracket_space(&$tokens) {
 
 
 /**
- * Adds one space after a comma
+ * Add one space after a comma
  *
  * @param array   $tokens (reference)
  */
@@ -1279,7 +1279,7 @@ function fix_comma_space(&$tokens) {
 
 
 /**
- * Fixes the format of a DocBlock
+ * Fix the format of a DocBlock
  *
  * @param array   $tokens (reference)
  */
@@ -1433,7 +1433,7 @@ function sort_doctags_cmp($a, $b) {
 
 
 /**
- * Adjusts empty lines after DocBlocks
+ * Adjust empty lines after DocBlocks
  *
  * @param array   $tokens (reference)
  */
@@ -1482,7 +1482,7 @@ function fix_docblock_space(&$tokens) {
 
 
 /**
- * Adds 2 blank lines after functions and classes
+ * Add 2 blank lines after functions and classes
  *
  * @param array   $tokens (reference)
  */
@@ -1723,7 +1723,7 @@ function indent(&$tokens) {
 
 
 /**
- * Indents one token
+ * Indent one token
  *
  * @param array   $tokens             (reference)
  * @param integer $key
@@ -1891,7 +1891,7 @@ function indent_text(&$tokens, $key, $curly_braces_count, $round_braces_count, $
 
 
 /**
- * Strips indenting before single closing PHP tags
+ * Strip indenting before single closing PHP tags
  *
  * @param array   $tokens (reference)
  */
@@ -1937,7 +1937,7 @@ function strip_closetag_indenting(&$tokens) {
 
 
 /**
- * Gets all defined functions
+ * Get all defined functions
  *
  * Functions inside of curly braces will be ignored.
  *
@@ -1971,7 +1971,7 @@ function get_functions(&$content) {
 
 
 /**
- * Gets all defined includes
+ * Get all defined includes
  *
  * @param array   $seetags (reference)
  * @param string  $content
@@ -2029,7 +2029,7 @@ function find_includes(&$seetags, &$content, $file) {
 
 
 /**
- * Replaces one DocTag in a DocBlock
+ * Replace one DocTag in a DocBlock
  *
  * Existing valid DocTags will be used without change
  *
@@ -2146,7 +2146,7 @@ function add_doctags_to_doc_comment($text, $tagname, $tags) {
 
 
 /**
- * Collects the doctags for a function docblock
+ * Collect the doctags for a function docblock
  *
  * @param array   $tokens (reference)
  * @return array
@@ -2291,7 +2291,7 @@ function collect_doctags(&$tokens) {
 
 
 /**
- * Adds file DocBlocks where missing
+ * Add file DocBlocks where missing
  *
  * @param array   $tokens (reference)
  */
@@ -2401,7 +2401,7 @@ function add_file_docblock(&$tokens) {
 
 
 /**
- * Adds funktion DocBlocks where missing
+ * Add funktion DocBlocks where missing
  *
  * @param array   $tokens (reference)
  */
@@ -2457,7 +2457,7 @@ function add_function_docblocks(&$tokens) {
 
 
 /**
- * Adds DocTags to file or function DocBlocks
+ * Add DocTags to file or function DocBlocks
  *
  * @param array   $tokens     (reference)
  * @param array   $usetags
