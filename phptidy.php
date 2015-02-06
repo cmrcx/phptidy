@@ -505,6 +505,7 @@ function format_once($source) {
 	if ($GLOBALS['add_file_docblock'])      add_file_docblock($tokens);
 	if ($GLOBALS['add_function_docblocks']) add_function_docblocks($tokens);
 	if ($GLOBALS['add_doctags']) {
+		/** @noinspection PhpUndefinedVariableInspection */
 		add_doctags($tokens, $usestags, $paramtags, $returntags, $GLOBALS['seetags']);
 	}
 	if ($GLOBALS['fix_docblock_format']) fix_docblock_format($tokens);
@@ -2473,7 +2474,7 @@ function add_doctags(&$tokens, $usestags, $paramtags, $returntags, $seetags) {
 	foreach ( $tokens as $key => &$token ) {
 
 		if (is_string($token)) continue;
-		list($id, $text) = $token;
+		list($id) = $token;
 		if ($id != T_DOC_COMMENT) continue;
 
 		$k = $key + 1;
