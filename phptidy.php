@@ -210,6 +210,7 @@ if ($command=="-") {
 	$file    = null; // Don't use a file name
 	$seetags = null; // Don't add any new seetags
 	$source = file_get_contents("php://stdin");
+	$functions = array_unique(get_functions($source));
 	format($source);
 	echo $source;
 	exit;
