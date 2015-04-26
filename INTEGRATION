@@ -1,0 +1,83 @@
+====== Integration of phptidy into editors ======
+
+Instead of running phptidy from command line, you can also integrate it into
+your editor or IDE.
+
+There are some possible approaches:
+
+1) run phptidy on the whole project
+
+  cd <project_path> && phptidy.php replace
+
+2) run phptidy only on a single file
+
+  Limitation: Since no other project files are read, no new see-tags will be
+  added to docblocks.
+
+2a) run phptidy on the file
+
+  cd <project_path> && phptidy.php replace <file>
+
+2b) let phptidy read from STDIN and write to STDOUT
+
+  | phptidy.php --quiet - |
+
+  Limitations:
+  - Since there is no file name, new file docblocks won't get a file name.
+  - If you want to use a config file, you either have to change to the project
+    path first:
+
+      | ( cd <project_path> && phptidy.php --quiet - ) |
+
+    or specify the absolute path to the config file:
+
+      | phptidy.php --quiet --config=/path/to/.phptidy-config.php - |
+
+
+Some examples:
+
+=== PhpStorm IDE ===
+
+You can run phptidy on the whole project as an "external tool":
+
+Settings/Preferences -> Tools -> External Tools -> +
+
+Program:           phptidy.php
+Parameters:        replace
+Working directory: $ProjectFileDir$
+
+In case phptidy.php can't be found in your PATH, you have to specify the
+absolute path in the Program field. There also seems to be a known problem:
+http://ify.io/getting-webstorm-external-tools-to-work-on-webstorm-on-osx/
+
+=== VIM ===
+
+You can run phptidy on the current buffer.
+
+Install the vim autoformat addon:
+https://github.com/Chiel92/vim-autoformat
+
+Add the following lines to your ~/.vimrc file:
+
+  let g:formatprg_php = "phptidy.php"
+  let g:formatprg_args_php = "--quiet -"
+
+If you want to use a config file, you can either change to the project path:
+
+  let g:formatprg_php = "cd <project_path> && phptidy.php"
+
+or specify the absolute path to the config file:
+
+  let g:formatprg_php = "--quiet --config=/path/to/.phptidy-config.php -"
+
+Unfortunately in both cases you will have to edit your ~/.vimrc to switch
+between projects with different config files.
+
+You should now be able to format an open PHP file using the following command:
+
+  :Autoformat
+
+
+Additional examples are welcome!
+
+Magnus Rosenbaum <phptidy@cmr.cx>
