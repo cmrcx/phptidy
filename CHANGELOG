@@ -1,4 +1,17 @@
-phptidy Changelog
+====== phptidy Changelog ======
+
+Version 2.14 (2015-04-26)
+- New formatting function for adding one space after an opening and before a
+  closing round bracket (disabled by default)
+- New option --config
+- New option --quiet
+- New command "-" to read code from STDIN and write formatted code to STDOUT
+- New documentation file INTEGRATION
+- Bugfix: No @uses tags were added to docblocks. To avoid unexpected behaviour,
+  the new configuration option $add_usestags has been added and disabled by
+  default.
+- Tests
+- Move version control from subversion to git
 
 Version 2.13 (2014-12-29)
 - Indent "else if" correctly
