@@ -6,19 +6,19 @@
  */
 
 
-include "hallo.php";
+include "hello.php";
 
-include 'hallo.php';
+include 'hello.php';
 
-include "hallo.php";
+include "hello.php";
 
-include DOCROOT."hallo.php";
+include DOCROOT."hello.php";
 
-include $docroot . "hallo.php";
+include $docroot . "hello.php";
 
-include $x."hallo.php";
+include $x."hello.php";
 
-include "hallo".$x.".php";
+include "hello".$x.".php";
 
 include $x;
 
