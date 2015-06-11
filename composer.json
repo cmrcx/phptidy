@@ -1,0 +1,24 @@
+{
+	"name": "cmrcx/phptidy",
+	"description": "PHP code formatter",
+	"homepage": "https://github.com/cmrcx/phptidy",
+	"license": "GPL-2.0+",
+	"authors": [
+		{
+			"name": "Magnus Rosenbaum",
+			"email": "phptidy@cmr.cx",
+			"homepage": "http://cmr.cx",
+			"role": "Developer"
+		}
+	],
+	"require": {
+		"php": ">=5.0",
+		"ext-cli": "*",
+		"ext-tokenizer": "*"
+	},
+	"suggest": {
+		"ext-mbstring": "*"
+	},
+	"bin": ["phptidy.php"]
+}
+
