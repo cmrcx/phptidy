@@ -13,7 +13,6 @@
 	],
 	"require": {
 		"php": ">=5.0",
-		"ext-cli": "*",
 		"ext-tokenizer": "*"
 	},
 	"suggest": {
