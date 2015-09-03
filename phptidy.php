@@ -97,6 +97,7 @@ $replace_shell_comments     = true;
 $fix_statement_brackets     = true;
 $fix_separation_whitespace  = true;
 $fix_comma_space            = true;
+$add_operator_space         = false;
 $fix_round_bracket_space    = false;
 $add_file_docblock          = true;
 $add_function_docblocks     = true;
@@ -494,6 +495,7 @@ function format_once($source) {
 	if ($GLOBALS['fix_statement_brackets'])     fix_statement_brackets($tokens);
 	if ($GLOBALS['fix_separation_whitespace'])  fix_separation_whitespace($tokens);
 	if ($GLOBALS['fix_comma_space'])            fix_comma_space($tokens);
+	if ($GLOBALS['add_operator_space'])         add_operator_space($tokens);
 	if ($GLOBALS['fix_round_bracket_space'])    fix_round_bracket_space($tokens);
 
 	// PhpDocumentor
@@ -1275,6 +1277,73 @@ function fix_comma_space(&$tokens) {
 			array_splice($tokens, $key+1, 0, array(
 					array(T_WHITESPACE, " ")
 				));
+		}
+	}
+
+}
+
+
+/**
+ * Add one space before and after some operators
+ *
+ * @param array   $tokens (reference)
+ */
+function add_operator_space(&$tokens) {
+
+	// Only operators, which don't require the spaces around
+	static $operators = array(
+		// assignment
+		"=",
+		array(T_PLUS_EQUAL,  "+="),
+		array(T_MINUS_EQUAL, "-="),
+		array(T_MUL_EQUAL,   "*="),
+		array(T_DIV_EQUAL,   "/="),
+		array(T_MOD_EQUAL,   "%="),
+		array(T_AND_EQUAL,   "&="),
+		array(T_OR_EQUAL,    "|="),
+		array(T_XOR_EQUAL,   "^="),
+		// comparison
+		array(T_IS_EQUAL,         "=="),
+		array(T_IS_IDENTICAL,     "==="),
+		array(T_IS_NOT_EQUAL,     "!="),
+		array(T_IS_NOT_EQUAL,     "<>"),
+		array(T_IS_NOT_IDENTICAL, "!=="),
+		"<",
+		">",
+		array(T_IS_SMALLER_OR_EQUAL, "<="),
+		array(T_IS_GREATER_OR_EQUAL, ">="),
+		// logical
+		"!",
+		array(T_BOOLEAN_AND, "&&"),
+		array(T_BOOLEAN_OR,  "||"),
+		// string
+		".",
+		array(T_CONCAT_EQUAL, ".="),
+	);
+
+	foreach ( $tokens as $key => &$token ) {
+		if ( in_array($token, $operators) ) {
+
+			if (
+				// The next token is no whitespace
+				!(isset($tokens[$key+1][0]) and $tokens[$key+1][0] === T_WHITESPACE)
+			) {
+				// Insert one space after
+				array_splice($tokens, $key+1, 0, array(
+						array(T_WHITESPACE, " ")
+					));
+			}
+
+			if (
+				// The token before is no whitespace
+				!(isset($tokens[$key-1][0]) and $tokens[$key-1][0] === T_WHITESPACE)
+			) {
+				// Insert one space before
+				array_splice($tokens, $key, 0, array(
+						array(T_WHITESPACE, " ")
+					));
+			}
+
 		}
 	}
 
