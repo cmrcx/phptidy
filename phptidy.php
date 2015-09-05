@@ -24,7 +24,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * @version 2.14 (2015-04-26)
+ * @version 2.15 (2015-09-05)
  * @author  Magnus Rosenbaum <phptidy@cmr.cx>
  * @package phptidy
  */
