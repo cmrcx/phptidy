@@ -575,7 +575,7 @@ function print_tokens($tokens) {
 /**
  * Wrapper for token_get_all(), because there is new mysterious index 2 ...
  *
- * @param string  $source
+ * @param string  $source (reference)
  * @return array
  */
 function get_tokens(&$source) {
@@ -624,7 +624,7 @@ function possible_syntax_error($tokens, $key, $message="") {
 /**
  * Remove whitespace from the beginning of a token array
  *
- * @param array   $tokens
+ * @param array   $tokens (reference)
  */
 function tokens_ltrim(&$tokens) {
 	while (
@@ -672,7 +672,7 @@ function strip_whitespace(&$tokens) {
 /**
  * Get the argument of a statement
  *
- * @param array   $tokens
+ * @param array   $tokens (reference)
  * @param integer $key    Key of the token of the command for which we want the argument
  * @return array
  */
@@ -727,7 +727,7 @@ function get_argument_tokens(&$tokens, $key) {
 /**
  * Check for some tokens which must not be touched
  *
- * @param array   $token
+ * @param array   $token (reference)
  * @return boolean
  */
 function token_is_taboo(&$token) {
@@ -1371,7 +1371,6 @@ function fix_docblock_format(&$tokens) {
 		$comments_started = false;
 		$doctags_started = false;
 		$last_line = false;
-		$param_max_variable_length = 0;
 		foreach ( $lines_orig as $line ) {
 			$line = trim($line);
 
@@ -1388,35 +1387,45 @@ function fix_docblock_format(&$tokens) {
 				$comments_started = true;
 			}
 
-			if (substr($line, 0, 3)=="* @") {
-
-				// Add empty line before DocTags if missing
-				if (!$doctags_started) {
-					if ($last_line!="*") $lines[] = "*";
-					if ($last_line=="/**") $lines[] = "*";
-					$doctags_started = true;
-				}
-
-				// DocTag format
-				if ( preg_match('/^\* @param(\s+[^\s\$]*)?\s+(&?\$[^\s]+)/', $line, $matches) ) {
-					$param_max_variable_length = max($param_max_variable_length, strlen($matches[2]));
-				}
-
+			// Add empty line before DocTags if missing
+			if (substr($line, 0, 3)=="* @" and !$doctags_started) {
+				if ($last_line!="*") $lines[] = "*";
+				if ($last_line=="/**") $lines[] = "*";
+				$doctags_started = true;
 			}
+
 			$lines[] = $line;
 			$last_line = $line;
 		}
 
-		foreach ( $lines as $l => $line ) {
+		$param_max_type_length = 7;
+		$param_max_variable_length = 2;
+		while ( list($l, $line) = each($lines) ) {
 
 			// DocTag format
 			if ( preg_match('/^\* @param(\s+([^\s\$]*))?(\s+(&?\$[^\s]+))?(.*)$/', $line, $matches) ) {
-				$line = "* @param ";
-				if ($matches[2]) $line .= str_pad($matches[2], 7); else $line .= "unknown";
-				$line .= " ";
-				if ($matches[4]) $line .= str_pad($matches[4], $param_max_variable_length)." ";
-				$line .= trim($matches[5]);
-				$lines[$l] = $line;
+
+				if (!$matches[2]) $matches[2] = "unknown";
+
+				// Restart loop if more space is needed
+				$restart = false;
+				if ( strlen($matches[2]) > $param_max_type_length ) {
+					$param_max_type_length = strlen($matches[2]);
+					$restart = true;
+				}
+				if ( strlen($matches[4]) > $param_max_variable_length ) {
+					$param_max_variable_length = strlen($matches[4]);
+					$restart = true;
+				}
+				if ($restart) {
+					reset($lines);
+					continue;
+				}
+
+				$lines[$l] = "* @param "
+					.str_pad($matches[2], $param_max_type_length)." "
+					.str_pad($matches[4], $param_max_variable_length)." "
+					.trim($matches[5]);
 			}
 
 		}
@@ -2013,7 +2022,7 @@ function strip_closetag_indenting(&$tokens) {
  *
  * Functions inside of curly braces will be ignored.
  *
- * @param string  $content
+ * @param string  $content (reference)
  * @return array
  */
 function get_functions(&$content) {
@@ -2046,7 +2055,7 @@ function get_functions(&$content) {
  * Get all defined includes
  *
  * @param array   $seetags (reference)
- * @param string  $content
+ * @param string  $content (reference)
  * @param string  $file
  */
 function find_includes(&$seetags, &$content, $file) {
@@ -2142,21 +2151,18 @@ function add_doctags_to_doc_comment($text, $tagname, $tags) {
 
 						if (
 							$tagname == "param" and
-							preg_match('/^\s*\*\s+@param\s+([A-Za-z0-9_]+)\s+(\$[A-Za-z0-9_]+)\s+(.*)$/', $oldtag, $matches)
+							preg_match('/^\s*\*\s+@param\s+([A-Za-z0-9_]+)\s+(\$[A-Za-z0-9_]+)\s*(.*)$/', $oldtag, $matches)
 						) {
 
 							// Replace param type if a type hint exists
-							if (empty($tag[1])) $tag[1] = $matches[1];
+							if ($tag[1]) $matches[1] = $tag[1];
 
 							// Add comment for optional and reference if not already existing
-							if (
-								isset($tag[2]) and
-								substr($matches[3], 0, strlen($tag[2])) != $tag[2]
-							) {
+							if ( substr($matches[3], 0, strlen($tag[2])) != $tag[2] ) {
 								$matches[3] = $tag[2]." ".$matches[3];
 							}
 
-							$newtext .= "* @param ".$tag[1]." ".$tag[0]." ".$matches[3]."\n";
+							$newtext .= "* @param ".$matches[1]." ".$tagid." ".$matches[3]."\n";
 
 						} else {
 							// Take old line without changes
@@ -2170,11 +2176,11 @@ function add_doctags_to_doc_comment($text, $tagname, $tags) {
 					// Add new line
 					switch ($tagname) {
 					case "param":
-						if (empty($tag[1])) $tag[1] = "unknown";
-						$newtext .= "* @param ".$tag[1]." ".$tag[0].(isset($tag[2])?" ".$tag[2]:"")."\n";
+						if (!$tag[1]) $tag[1] = "unknown";
+						$newtext .= "* @param ".$tag[1]." ".$tagid." ".$tag[2]."\n";
 						break;
 					case "uses":
-						$newtext .= "* @uses ".$tag[0]."()\n";
+						$newtext .= "* @uses ".$tagid."()\n";
 						break;
 					case "return":
 						$newtext .= "* @return unknown\n";
@@ -2188,7 +2194,7 @@ function add_doctags_to_doc_comment($text, $tagname, $tags) {
 						$newtext .= "* @package ".$GLOBALS['default_package']."\n";
 						break;
 					case "see":
-						$newtext .= "* @see ".$tag[0]."\n";
+						$newtext .= "* @see ".$tagid."\n";
 						break;
 					}
 
@@ -2291,18 +2297,34 @@ function collect_doctags(&$tokens) {
 							$typehint = "";
 						} elseif (
 							$tokens[$k][0] === T_ARRAY and
-							isset($tokens[$k+1][0]) and $tokens[$k+1][0] === T_WHITESPACE and
-							isset($tokens[$k+2][0]) and $tokens[$k+2][0] === T_VARIABLE
+							isset($tokens[$k+1][0]) and $tokens[$k+1][0] === T_WHITESPACE
 						) {
-							$k += 2;
 							$typehint = "array";
+							if ($tokens[$k+2]==="&") {
+								$reference = true;
+								$k++;
+								if (isset($tokens[$k+2][0]) and $tokens[$k+2][0] === T_WHITESPACE) $k++;
+							}
+							if (isset($tokens[$k+2][0]) and $tokens[$k+2][0] === T_VARIABLE) {
+								$k += 2;
+							} else {
+								$typehint = false;
+							}
 						} elseif (
 							$tokens[$k][0] === T_STRING and
-							isset($tokens[$k+1][0]) and $tokens[$k+1][0] === T_WHITESPACE and
-							isset($tokens[$k+2][0]) and $tokens[$k+2][0] === T_VARIABLE
+							isset($tokens[$k+1][0]) and $tokens[$k+1][0] === T_WHITESPACE
 						) {
-							$k += 2;
-							$typehint = "object";
+							$typehint = $tokens[$k][1];
+							if ($tokens[$k+2]==="&") {
+								$reference = true;
+								$k++;
+								if (isset($tokens[$k+2][0]) and $tokens[$k+2][0] === T_WHITESPACE) $k++;
+							}
+							if (isset($tokens[$k+2][0]) and $tokens[$k+2][0] === T_VARIABLE) {
+								$k += 2;
+							} else {
+								$typehint = false;
+							}
 						}
 						if ($typehint !== false) {
 							$comments = array();
