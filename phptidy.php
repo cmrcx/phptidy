@@ -199,11 +199,14 @@ foreach ( $options as $option ) {
 if ( $external_config_file ) {
 	display("Using external configuration file ".$external_config_file."\n");
 	require $external_config_file;
+	$configfile = $external_config_file;
 } elseif ( file_exists(CONFIGFILE) ) {
 	display("Using configuration file ".CONFIGFILE."\n");
 	require CONFIGFILE;
+	$configfile = CONFIGFILE;
 } else {
 	display("Running without configuration file\n");
+	$configfile = false;
 }
 
 // Read code from STDIN and write formatted code to STDOUT
@@ -255,18 +258,6 @@ if ($command=="files") {
 	exit;
 }
 
-// Read cache file
-if ( file_exists(CACHEFILE) ) {
-	display("Using cache file ".CACHEFILE."\n");
-	$cache = unserialize(file_get_contents(CACHEFILE));
-	$cache_orig = $cache;
-} else {
-	$cache = array(
-		'md5sums' => array(),
-	);
-	$cache_orig = false;
-}
-
 // Find functions and includes
 display("Find functions and includes ");
 $functions = array();
@@ -281,13 +272,25 @@ display("\n");
 //print_r($functions);
 //print_r($seetags);
 
-$md5sum = md5(serialize($functions).serialize($seetags));
-if ( isset($cache['functions_seetags']) and $md5sum == $cache['functions_seetags'] ) {
-	// Use cache only if functions and seetags haven't changed
-	$use_cache = true;
-} else {
-	$use_cache = false;
-	$cache['functions_seetags'] = $md5sum;
+// Read cache file
+$new_cache = array(
+	'setting' => md5(
+		// Use cache only if none of this has changed
+		file_get_contents($_SERVER['argv'][0]).
+		($configfile ? file_get_contents($configfile) : '').
+		serialize($functions).
+		serialize($seetags)
+	),
+	'files' => array()
+);
+$cache = false;
+$use_cache = false;
+if ( file_exists(CACHEFILE) ) {
+	display("Using cache file ".CACHEFILE."\n");
+	$cache = unserialize(file_get_contents(CACHEFILE));
+	if ( isset($cache['setting']) and $new_cache['setting'] == $cache['setting'] ) {
+		$use_cache = true;
+	}
 }
 
 display("Process files\n");
@@ -299,9 +302,11 @@ foreach ( $files as $file ) {
 
 	// Cache
 	$md5sum = md5($source);
-	if ( $use_cache and isset($cache['md5sums'][$file]) and $md5sum == $cache['md5sums'][$file] ) {
+	if ( $use_cache and isset($cache['files'][$file]) and $md5sum == $cache['files'][$file] ) {
 		// Original file has not changed, so we don't process it
 		if ($verbose) display("  File unchanged since last processing.\n");
+		// Write md5sum of the skipped file into cache
+		$new_cache['files'][$file] = $md5sum;
 		continue;
 	}
 
@@ -323,7 +328,7 @@ foreach ( $files as $file ) {
 	if ( $count == 1 ) {
 		if ($verbose) display("  Processed without changes.\n");
 		// Write md5sum of the unchanged file into cache
-		$cache['md5sums'][$file] = $md5sum;
+		$new_cache['files'][$file] = $md5sum;
 		continue;
 	}
 
@@ -351,7 +356,7 @@ foreach ( $files as $file ) {
 		++$replaced;
 
 		// Write new md5sum into cache
-		$cache['md5sums'][$file] = md5($source);
+		$new_cache['files'][$file] = md5($source);
 
 		break;
 	case "diff":
@@ -376,9 +381,9 @@ if ($command=="replace") {
 	if ($replaced) {
 		display("Replaced ".$replaced." files.\n");
 	}
-	if ($cache != $cache_orig) {
+	if ($new_cache != $cache) {
 		display("Write cache file ".CACHEFILE."\n");
-		if ( !file_put_contents(CACHEFILE, serialize($cache)) ) {
+		if ( !file_put_contents(CACHEFILE, serialize($new_cache)) ) {
 			display("Warning: The cache file '".CACHEFILE."' could not be saved.\n");
 		}
 	}
