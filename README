@@ -44,8 +44,6 @@ phptidy is released under the GPL and can be used for free.
 
 - PHP CLI SAPI
     http://php.net/manual/en/features.commandline.php
-    phptidy expects PHP in /usr/bin/php. If your PHP executable is in a
-    different path, you will have to edit the first line of phptidy.php.
 
 - PHP extension: Tokenizer
     http://php.net/manual/en/book.tokenizer.php
