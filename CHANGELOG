@@ -1,5 +1,13 @@
 ====== phptidy Changelog ======
 
+Version 2.16 (2015-10-27)
+- Bugfix: In @param doctags "object" was used instead of class name type hints
+  and references and type hints were not detected when used together.
+- New formatting function for adding spaces around operators (disabled by
+  default)
+- Don't use cache if the version of phptidy or the configuration has changed
+- Use PHP in $PATH instead of /usr/bin/php
+
 Version 2.15 (2015-09-05)
 - Composer integration
 
