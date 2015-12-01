@@ -1,5 +1,7 @@
 ====== phptidy Changelog ======
 
+- New configuration option $keep_open_echo_tags
+
 Version 2.16 (2015-10-27)
 - Bugfix: In @param doctags "object" was used instead of class name type hints
   and references and type hints were not detected when used together.

@@ -74,6 +74,11 @@ $curly_brace_newline = false;
 // Useful values: "<?", "<?php", "<?PHP"
 $open_tag = "<?php";
 
+// Keep short open echo tags even when using long open tags
+// Values: false  if long open tags are used, convert <?= to open tag and echo
+//         true   always leave <?= untouched
+$keep_open_echo_tags = false;
+
 // Check encoding
 // If left empty the encoding will not be checked.
 // See http://php.net/manual/en/ref.mbstring.html for a list of supported
@@ -967,7 +972,7 @@ function replace_phptags(&$tokens) {
 		case T_OPEN_TAG_WITH_ECHO:
 
 			// If we use short tags we also accept the echo tags
-			if ($GLOBALS['open_tag']=="<?") continue;
+			if ($GLOBALS['open_tag']=="<?" or $GLOBALS['keep_open_echo_tags']) continue;
 
 			if ( $tokens[$key+1][0] === T_WHITESPACE ) {
 				// If there is already whitespace following we only replace the open tag
