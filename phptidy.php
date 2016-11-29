@@ -2269,7 +2269,7 @@ function collect_doctags(&$tokens) {
 
 				$k = $key + 1;
 
-				// Anonymous function
+				// Anonymous function with no whitespace between function keyword and opening brace
 				if ( $tokens[$k] === "(" ) break;
 
 				if ( is_string($tokens[$k]) or $tokens[$k][0] !== T_WHITESPACE ) {
@@ -2278,6 +2278,9 @@ function collect_doctags(&$tokens) {
 				}
 
 				++$k;
+
+				// Anonymous function with whitespace between function keyword and opening brace
+				if ( $tokens[$k] === "(" ) break;
 
 				// & before function name
 				if ( $tokens[$k] === "&" ) ++$k;
@@ -2516,7 +2519,9 @@ function add_function_docblocks(&$tokens) {
 		if ( is_string($token) or $token[0] !== T_FUNCTION ) continue;
 
 		// No DocBlock for anonymous functions
-		if ( isset($tokens[$key+1]) and $tokens[$key+1]==="(" ) continue;
+		$k = $key + 1;
+		if ( isset($tokens[$k][0]) and $tokens[$k][0]===T_WHITESPACE ) ++$k; // Skip whitespace
+		if ( isset($tokens[$k]) and $tokens[$k]==="(" ) continue;
 
 		// Find beginning of the function declaration
 		$k = $key;

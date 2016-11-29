@@ -8,6 +8,8 @@
 
 $x = function() {};
 
+$x = function () {};
+
 // comment
 echo function() {
 	return "Hello";
