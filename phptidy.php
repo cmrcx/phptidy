@@ -5,7 +5,7 @@
  *
  * See README for more information.
  *
- * PHP version >= 5.0
+ * PHP version >= 5 < 7
  *
  * @copyright 2003-2015 Magnus Rosenbaum
  * @license   GPL v2
@@ -123,8 +123,8 @@ define('CACHEFILE', "./.phptidy-cache");
 error_reporting(E_ALL);
 ini_set('display_errors', 'stderr');
 
-if (!version_compare(phpversion(), "5.0", ">=")) {
-	error("phptidy requires PHP 5 or newer.");
+if (!version_compare(phpversion(), "5", ">=") or !version_compare(phpversion(), "7", "<")) {
+	error("phptidy runs on PHP 5 only.");
 }
 if (!extension_loaded("tokenizer")) {
 	error("The 'Tokenizer' extension for PHP is missing. See http://php.net/manual/en/book.tokenizer.php for more information.");

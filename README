@@ -41,6 +41,8 @@ phptidy is released under the GPL and can be used for free.
     phptidy does not work on PHP 4, because some functions introduced in PHP 5
     are used, and there are also some differences in the tokens. But it should
     be not too difficult to port it to PHP 4.
+    phptidy does not work on PHP 7 so far, because the function array_splice()
+    is broken in PHP 7: https://bugs.php.net/bug.php?id=70471
 
 - PHP CLI SAPI
     http://php.net/manual/en/features.commandline.php
