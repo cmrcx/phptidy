@@ -5,7 +5,7 @@
  *
  * See README for more information.
  *
- * PHP version >= 5 < 7
+ * PHP version >= 5
  *
  * @copyright 2003-2016 Magnus Rosenbaum
  * @license   GPL v2
@@ -123,8 +123,8 @@ define('CACHEFILE', "./.phptidy-cache");
 error_reporting(E_ALL);
 ini_set('display_errors', 'stderr');
 
-if (!version_compare(phpversion(), "5", ">=") or !version_compare(phpversion(), "7", "<")) {
-	error("phptidy runs on PHP 5 only.");
+if (!version_compare(phpversion(), "5", ">=")) {
+	error("phptidy requires PHP 5 or newer.");
 }
 if (!extension_loaded("tokenizer")) {
 	error("The 'Tokenizer' extension for PHP is missing. See http://php.net/manual/en/book.tokenizer.php for more information.");
@@ -550,6 +550,34 @@ function format_once($source) {
 }
 
 
+/**
+ * Replacement for broken array_splice() in PHP 7
+ * https://bugs.php.net/bug.php?id=70471
+ *
+ * Works in PHP 5 and 7 as array_splice() of PHP 5.
+ *
+ * @param array   $input       (reference)
+ * @param integer $offset
+ * @param integer $length      (optional)
+ * @param array   $replacement (optional)
+ * @return array
+ */
+function array_splice_fixed(array &$input, $offset, $length=null, array $replacement=array()) {
+	if ($offset < 0) $offset = max(0, count($input) + $offset);
+	$left = array_slice($input, 0, $offset);
+	if (is_null($length)) {
+		$extracted = array_slice($input, $offset);
+		$input = array_merge($left, $replacement);
+	} else {
+		$rest = array_slice($input, $offset);
+		if ($length < 0) $length = max(0, count($rest) + $length);
+		$extracted = array_slice($rest, 0, $length);
+		$input = array_merge($left, $replacement, array_slice($rest, $length));
+	}
+	return $extracted;
+}
+
+
 //////////////// TOKEN FUNCTIONS ///////////////////
 
 
@@ -641,7 +669,7 @@ function tokens_ltrim(&$tokens) {
 		isset($tokens[0][0]) and
 		$tokens[0][0] === T_WHITESPACE
 	) {
-		array_splice($tokens, 0, 1);
+		array_splice_fixed($tokens, 0, 1);
 	}
 }
 
@@ -656,7 +684,7 @@ function tokens_rtrim(&$tokens) {
 		isset($tokens[$k=count($tokens)-1][0]) and
 		$tokens[$k][0] === T_WHITESPACE
 	) {
-		array_splice($tokens, -1);
+		array_splice_fixed($tokens, -1);
 	}
 }
 
@@ -936,13 +964,13 @@ function replace_phptags(&$tokens) {
 			$whitespace = $matches[0];
 			if ( $tokens[$key+1][0] === T_WHITESPACE ) {
 				$whitespace .= $tokens[$key+1][1];
-				array_splice($tokens, $key+1, 1);
+				array_splice_fixed($tokens, $key+1, 1);
 			}
 
 			if ($GLOBALS['open_tag']=="<?") {
 
 				// Short open tags have the following whitespace in a seperate token
-				array_splice($tokens, $key, 1, array(
+				array_splice_fixed($tokens, $key, 1, array(
 						array(T_OPEN_TAG, $GLOBALS['open_tag']),
 						array(T_WHITESPACE, $whitespace)
 					));
@@ -960,7 +988,7 @@ function replace_phptags(&$tokens) {
 					break;
 				default:
 					// Use the first space or newline for the open tag and append the rest of the whitespace as a seperate token
-					array_splice($tokens, $key, 1, array(
+					array_splice_fixed($tokens, $key, 1, array(
 							array(T_OPEN_TAG, $GLOBALS['open_tag'].substr($whitespace, 0, 1)),
 							array(T_WHITESPACE, substr($whitespace, 1))
 						));
@@ -976,13 +1004,13 @@ function replace_phptags(&$tokens) {
 
 			if ( $tokens[$key+1][0] === T_WHITESPACE ) {
 				// If there is already whitespace following we only replace the open tag
-				array_splice($tokens, $key, 1, array(
+				array_splice_fixed($tokens, $key, 1, array(
 						array(T_OPEN_TAG, $GLOBALS['open_tag']." "),
 						array(T_ECHO, "echo")
 					));
 			} else {
 				// If there is no whitespace following we add one space
-				array_splice($tokens, $key, 1, array(
+				array_splice_fixed($tokens, $key, 1, array(
 						array(T_OPEN_TAG, $GLOBALS['open_tag']." "),
 						array(T_ECHO, "echo"),
 						array(T_WHITESPACE, " ")
@@ -1090,7 +1118,7 @@ function fix_statement_brackets(&$tokens) {
 			array_unshift($tokens_arg, array(T_WHITESPACE, " "));
 		}
 
-		array_splice($tokens, $key+1, count($tokens_arg_orig), $tokens_arg);
+		array_splice_fixed($tokens, $key+1, count($tokens_arg_orig), $tokens_arg);
 
 	}
 
@@ -1115,7 +1143,7 @@ function fix_separation_whitespace(&$tokens) {
 					isset($tokens[$key+1]) and $tokens[$key+1] === "{"
 				) {
 					// Insert an additional space or newline before the bracket
-					array_splice($tokens, $key+1, 0, array(
+					array_splice_fixed($tokens, $key+1, 0, array(
 							array(T_WHITESPACE, separation_whitespace($control_structure))
 						));
 				} elseif (
@@ -1141,7 +1169,7 @@ function fix_separation_whitespace(&$tokens) {
 					// Exactly 1 space between the class name and the opening curly bracket
 					if ( $tokens[$key+3] === "{" ) {
 						// Insert an additional space or newline before the bracket
-						array_splice($tokens, $key+3, 0, array(
+						array_splice_fixed($tokens, $key+3, 0, array(
 								array(T_WHITESPACE, separation_whitespace(T_CLASS))
 							));
 					} elseif (
@@ -1164,7 +1192,7 @@ function fix_separation_whitespace(&$tokens) {
 					// No whitespace between function name and opening round bracket
 					if ( isset($tokens[$key+3][0]) and $tokens[$key+3][0] === T_WHITESPACE ) {
 						// Remove the whitespace
-						array_splice($tokens, $key+3, 1);
+						array_splice_fixed($tokens, $key+3, 1);
 					}
 				}
 				break;
@@ -1177,7 +1205,7 @@ function fix_separation_whitespace(&$tokens) {
 				// At least 1 space between a statement and a opening round bracket
 				if ( $tokens[$key+1] === "(" ) {
 					// Insert an additional space or newline before the bracket
-					array_splice($tokens, $key+1, 0, array(
+					array_splice_fixed($tokens, $key+1, 0, array(
 							array(T_WHITESPACE, separation_whitespace(T_SWITCH)),
 						));
 				}
@@ -1187,7 +1215,7 @@ function fix_separation_whitespace(&$tokens) {
 				// Exactly 1 space between a command and a opening curly bracket
 				if ( $tokens[$key+1] === "{" ) {
 					// Insert an additional space or newline before the bracket
-					array_splice($tokens, $key+1, 0, array(
+					array_splice_fixed($tokens, $key+1, 0, array(
 							array(T_WHITESPACE, separation_whitespace(T_DO)),
 						));
 				} elseif (
@@ -1247,7 +1275,7 @@ function fix_round_bracket_space(&$tokens) {
 			!( isset($tokens[$key+1][0]) and $tokens[$key+1][0] === ')' )
 		) {
 			// Insert one space
-			array_splice($tokens, $key+1, 0, array(
+			array_splice_fixed($tokens, $key+1, 0, array(
 					array(T_WHITESPACE, " ")
 				));
 		} elseif (
@@ -1259,7 +1287,7 @@ function fix_round_bracket_space(&$tokens) {
 			!( isset($tokens[$key-1][0]) and $tokens[$key-1][0] === '(' )
 		) {
 			// Insert one space
-			array_splice($tokens, $key, 0, array(
+			array_splice_fixed($tokens, $key, 0, array(
 					array(T_WHITESPACE, " ")
 				));
 		}
@@ -1284,7 +1312,7 @@ function fix_comma_space(&$tokens) {
 			!(isset($tokens[$key+1][0]) and $tokens[$key+1][0] === T_WHITESPACE)
 		) {
 			// Insert one space
-			array_splice($tokens, $key+1, 0, array(
+			array_splice_fixed($tokens, $key+1, 0, array(
 					array(T_WHITESPACE, " ")
 				));
 		}
@@ -1339,7 +1367,7 @@ function add_operator_space(&$tokens) {
 				!(isset($tokens[$key+1][0]) and $tokens[$key+1][0] === T_WHITESPACE)
 			) {
 				// Insert one space after
-				array_splice($tokens, $key+1, 0, array(
+				array_splice_fixed($tokens, $key+1, 0, array(
 						array(T_WHITESPACE, " ")
 					));
 			}
@@ -1349,7 +1377,7 @@ function add_operator_space(&$tokens) {
 				!(isset($tokens[$key-1][0]) and $tokens[$key-1][0] === T_WHITESPACE)
 			) {
 				// Insert one space before
-				array_splice($tokens, $key, 0, array(
+				array_splice_fixed($tokens, $key, 0, array(
 						array(T_WHITESPACE, " ")
 					));
 			}
@@ -2082,7 +2110,7 @@ function find_includes(&$seetags, &$content, $file) {
 
 		// Strip round brackets
 		if ( $t[0] === "(" and $t[count($t)-1] === ")" ) {
-			$t = array_splice($t, 1, -1);
+			$t = array_splice_fixed($t, 1, -1);
 		}
 
 		if (!$t) {
@@ -2098,7 +2126,7 @@ function find_includes(&$seetags, &$content, $file) {
 			in_array($t[0][1], $GLOBALS['docrootvars']) and
 			$t[1] === "."
 		) {
-			$t = array_splice($t, 2);
+			$t = array_splice_fixed($t, 2);
 		}
 
 		if (
@@ -2439,7 +2467,7 @@ function add_file_docblock(&$tokens) {
 		if ($GLOBALS['open_tag']=="<?") {
 			if ( $tokens[1][0] === T_WHITESPACE and $tokens[2][0] === T_DOC_COMMENT ) return;
 			// Insert new file docblock after open tag
-			array_splice($tokens, 0, 1, array(
+			array_splice_fixed($tokens, 0, 1, array(
 					array(T_OPEN_TAG, "<?"),
 					array(T_WHITESPACE, "\n"),
 					array(T_DOC_COMMENT, $default_file_docblock),
@@ -2448,7 +2476,7 @@ function add_file_docblock(&$tokens) {
 		} else {
 			if ( $tokens[1][0] === T_DOC_COMMENT ) return;
 			// Insert new file docblock after open tag
-			array_splice($tokens, 0, 1, array(
+			array_splice_fixed($tokens, 0, 1, array(
 					array(T_OPEN_TAG, $GLOBALS['open_tag']."\n"),
 					array(T_DOC_COMMENT, $default_file_docblock),
 					array(T_WHITESPACE, "\n")
@@ -2463,7 +2491,7 @@ function add_file_docblock(&$tokens) {
 			if ($GLOBALS['open_tag']=="<?") {
 				if ( $tokens[2][0] === T_WHITESPACE and $tokens[3][0] === T_DOC_COMMENT ) return;
 				// Insert new file docblock after open tag
-				array_splice($tokens, 1, 1, array(
+				array_splice_fixed($tokens, 1, 1, array(
 						array(T_OPEN_TAG, "<?"),
 						array(T_WHITESPACE, "\n"),
 						array(T_DOC_COMMENT, $default_file_docblock),
@@ -2472,7 +2500,7 @@ function add_file_docblock(&$tokens) {
 			} else {
 				if ( $tokens[2][0] === T_DOC_COMMENT ) return;
 				// Insert new file docblock after open tag
-				array_splice($tokens, 1, 1, array(
+				array_splice_fixed($tokens, 1, 1, array(
 						array(T_OPEN_TAG, $GLOBALS['open_tag']."\n"),
 						array(T_DOC_COMMENT, $default_file_docblock),
 						array(T_WHITESPACE, "\n")
@@ -2484,7 +2512,7 @@ function add_file_docblock(&$tokens) {
 
 			// Insert new file docblock in open and close tags at the beginning of the file
 			if ($GLOBALS['open_tag']=="<?") {
-				array_splice($tokens, 0, 0, array(
+				array_splice_fixed($tokens, 0, 0, array(
 						array(T_OPEN_TAG, "<?"),
 						array(T_WHITESPACE, "\n"),
 						array(T_DOC_COMMENT, $default_file_docblock),
@@ -2492,7 +2520,7 @@ function add_file_docblock(&$tokens) {
 						array(T_CLOSE_TAG, "?>\n")
 					));
 			} else {
-				array_splice($tokens, 0, 0, array(
+				array_splice_fixed($tokens, 0, 0, array(
 						array(T_OPEN_TAG, $GLOBALS['open_tag']."\n"),
 						array(T_DOC_COMMENT, $default_file_docblock),
 						array(T_WHITESPACE, "\n\n\n"),
@@ -2551,7 +2579,7 @@ function add_function_docblocks(&$tokens) {
 
 			if (!$comment) $comment = " *\n";
 
-			array_splice($tokens, $k, $replace, array(
+			array_splice_fixed($tokens, $k, $replace, array(
 					array(T_DOC_COMMENT, "/**\n".
 						$comment.
 						" */"),
