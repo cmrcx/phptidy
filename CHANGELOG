@@ -1,5 +1,7 @@
 ====== phptidy Changelog ======
 
+- Change path of temp file, which did not work on Windows
+
 Version 2.17 (2016-11-29)
 - New configuration option $keep_open_echo_tags
 - Bugfix: Handle anonymous functions with whitespace between function keyword

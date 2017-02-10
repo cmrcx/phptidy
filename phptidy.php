@@ -319,7 +319,7 @@ foreach ( $files as $file ) {
 	if ($encoding and !mb_check_encoding($source, $encoding)) {
 		display("  File contains characters which are not valid in ".$encoding.":\n");
 		$source_converted = mb_convert_encoding($source, $encoding);
-		$tmpfile = "/tmp/tmp.phptidy.php";
+		$tmpfile = dirname($file).(dirname($file)?"/":"").".".basename($file).".phptidytmp~";
 		if ( !file_put_contents($tmpfile, $source_converted) ) {
 			error("The temporary file '".$tmpfile."' could not be saved.");
 		}
@@ -366,7 +366,7 @@ foreach ( $files as $file ) {
 		break;
 	case "diff":
 
-		$tmpfile = "/tmp/tmp.phptidy.php";
+		$tmpfile = dirname($file).(dirname($file)?"/":"").".".basename($file).".phptidytmp~";
 		if ( !file_put_contents($tmpfile, $source) ) {
 			error("The temporary file '".$tmpfile."' could not be saved.");
 		}
