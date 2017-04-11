@@ -61,7 +61,7 @@ $default_package = "default";
 // If you indent with spaces you can use as much spaces as you like.
 // Useful values: "\t" for indenting with tabs,
 //                "  " for indenting with two spaces
-$indent_char = "\t";
+$indent_char = "    ";
 
 // Control structures with the opening curly brace on a new line
 // Examples: false                      always on the same line
