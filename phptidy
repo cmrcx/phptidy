@@ -1,1 +1,10 @@
-phptidy.php
+#!/usr/bin/env php
+<?php
+/**
+ * phptidy
+ *
+ * @package default
+ */
+
+
+require dirname(__FILE__).'/phptidy.php';
