@@ -1,5 +1,7 @@
 ====== phptidy Changelog ======
 
+- Point composer directly to phptidy.php
+
 Version 3.0 (2017-03-09)
 - Works on PHP 7 now.
 - Change path of temp file, which did not work on Windows
