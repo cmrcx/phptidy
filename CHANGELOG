@@ -1,5 +1,6 @@
 ====== phptidy Changelog ======
 
+Version 3.1 (2018-01-02)
 - Point composer directly to phptidy.php
 
 Version 3.0 (2017-03-09)
