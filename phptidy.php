@@ -115,9 +115,8 @@ $indent                     = true;
 
 ///////////// END OF DEFAULT CONFIGURATION ////////////////
 
-
-define('CONFIGFILE', "./.phptidy-config.php");
-define('CACHEFILE', "./.phptidy-cache");
+define('CONFIGFILE', getenv('PHPTIDY_CONFIGFILE') ? getenv('PHPTIDY_CONFIGFILE') : "./.phptidy-config.php");
+define('CACHEFILE', getenv('PHPTIDY_CACHEFILE') ? getenv('PHPTIDY_CACHEFILE') : "./.phptidy-cache");
 
 
 error_reporting(E_ALL);
