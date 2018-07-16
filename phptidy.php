@@ -1438,7 +1438,7 @@ function fix_docblock_format(&$tokens) {
 
 		$param_max_type_length = 7;
 		$param_max_variable_length = 2;
-		while ( list($l, $line) = each($lines) ) {
+		while ( $line = current($lines) ) {
 
 			// DocTag format
 			if ( preg_match('/^\* @param(\s+([^\s\$]*))?(\s+(&?\$[^\s]+))?(.*)$/', $line, $matches) ) {
@@ -1460,12 +1460,13 @@ function fix_docblock_format(&$tokens) {
 					continue;
 				}
 
-				$lines[$l] = "* @param "
+				$lines[key($lines)] = "* @param "
 					.str_pad($matches[2], $param_max_type_length)." "
 					.str_pad($matches[4], $param_max_variable_length)." "
 					.trim($matches[5]);
 			}
 
+			next($lines);
 		}
 
 		// Sort DocTags
