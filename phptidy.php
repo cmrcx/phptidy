@@ -90,7 +90,7 @@ $encoding = "";
 // phptidy will strip these variables and constants from the beginning of
 // include and require commands to generate appropriate @see tags also for
 // these files.
-// Example: array('DOCROOT', '$docroot', '$GLOBALS[\'docroot\']');
+// Example: array('DOCROOT', '$docroot');
 $docrootvars = array();
 
 // Enable the single cleanup functions

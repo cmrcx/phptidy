@@ -3,6 +3,7 @@
  * function_blank_lines.php
  *
  * @package default
+ * @see include.php
  */
 
 
