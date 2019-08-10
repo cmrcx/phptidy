@@ -1,5 +1,6 @@
 ====== phptidy Changelog ======
 
+Version 3.2 (2019-08-10)
 - Replace each() because of Deprecation in PHP 7.2
 - Add tests for @see tags
 - Remove not working '$GLOBALS[\'docroot\']' from configuration examples
