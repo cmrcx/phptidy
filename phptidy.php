@@ -957,7 +957,7 @@ function replace_phptags(&$tokens) {
 		case T_OPEN_TAG:
 
 			// The open tag is already the right one
-			if ( rtrim($token[1]) == $GLOBALS['open_tag'] ) continue;
+			if ( rtrim($token[1]) == $GLOBALS['open_tag'] ) continue 2;
 
 			// Collect following whitespace
 			preg_match("/\s*$/", $token[1], $matches);
@@ -1000,7 +1000,7 @@ function replace_phptags(&$tokens) {
 		case T_OPEN_TAG_WITH_ECHO:
 
 			// If we use short tags we also accept the echo tags
-			if ($GLOBALS['open_tag']=="<?" or $GLOBALS['keep_open_echo_tags']) continue;
+			if ($GLOBALS['open_tag']=="<?" or $GLOBALS['keep_open_echo_tags']) continue 2;
 
 			if ( $tokens[$key+1][0] === T_WHITESPACE ) {
 				// If there is already whitespace following we only replace the open tag
