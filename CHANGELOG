@@ -1,5 +1,9 @@
 ====== phptidy Changelog ======
 
+Version 3.3 (2020-10-24)
+- Adapt continue statements to PHP 7.3
+- Tested with PHP 5.6, 7.0, 7.1, 7.2, 7.3, 7.4
+
 Version 3.2 (2019-08-10)
 - Replace each() because of Deprecation in PHP 7.2
 - Add tests for @see tags
