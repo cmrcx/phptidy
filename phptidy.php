@@ -1655,6 +1655,7 @@ function add_blank_lines(&$tokens) {
 
 				// At least 2 blank lines after a function or class
 				if (
+					is_array($tokens[$key]) and
 					$tokens[$key+1][0] === T_WHITESPACE and
 					substr($tokens[$key+1][1], 0, 2) != "\n\n\n"
 				) {
