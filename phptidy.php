@@ -112,6 +112,7 @@ $fix_docblock_format        = true;
 $fix_docblock_space         = true;
 $add_blank_lines            = true;
 $indent                     = true;
+$use_cache_file             = true;
 
 ///////////// END OF DEFAULT CONFIGURATION ////////////////
 
@@ -278,19 +279,21 @@ display("\n");
 //print_r($seetags);
 
 // Read cache file
-$new_cache = array(
-	'setting' => md5(
-		// Use cache only if none of this has changed
-		file_get_contents($_SERVER['argv'][0]).
-		($configfile ? file_get_contents($configfile) : '').
-		serialize($functions).
-		serialize($seetags)
-	),
-	'files' => array()
-);
+if ($use_cache_file) {
+	$new_cache = array(
+		'setting' => md5(
+			// Use cache only if none of this has changed
+			file_get_contents($_SERVER['argv'][0]).
+			($configfile ? file_get_contents($configfile) : '').
+			serialize($functions).
+			serialize($seetags)
+		),
+		'files' => array()
+	);
+}
 $cache = false;
 $use_cache = false;
-if ( file_exists(CACHEFILE) ) {
+if ( file_exists(CACHEFILE) && $use_cache_file ) {
 	display("Using cache file ".CACHEFILE."\n");
 	$cache = unserialize(file_get_contents(CACHEFILE));
 	if ( isset($cache['setting']) and $new_cache['setting'] == $cache['setting'] ) {
@@ -333,7 +336,7 @@ foreach ( $files as $file ) {
 	if ( $count == 1 ) {
 		if ($verbose) display("  Processed without changes.\n");
 		// Write md5sum of the unchanged file into cache
-		$new_cache['files'][$file] = $md5sum;
+		if ($use_cache) $new_cache['files'][$file] = $md5sum;
 		continue;
 	}
 
@@ -361,7 +364,7 @@ foreach ( $files as $file ) {
 		++$replaced;
 
 		// Write new md5sum into cache
-		$new_cache['files'][$file] = md5($source);
+		if ($use_cache) $new_cache['files'][$file] = md5($source);
 
 		break;
 	case "diff":
@@ -386,7 +389,7 @@ if ($command=="replace") {
 	if ($replaced) {
 		display("Replaced ".$replaced." files.\n");
 	}
-	if ($new_cache != $cache) {
+	if ($use_cache_file && $new_cache != $cache) {
 		display("Write cache file ".CACHEFILE."\n");
 		if ( !file_put_contents(CACHEFILE, serialize($new_cache)) ) {
 			display("Warning: The cache file '".CACHEFILE."' could not be saved.\n");
@@ -1655,6 +1658,7 @@ function add_blank_lines(&$tokens) {
 
 				// At least 2 blank lines after a function or class
 				if (
+					is_array($tokens[$key]) and
 					$tokens[$key+1][0] === T_WHITESPACE and
 					substr($tokens[$key+1][1], 0, 2) != "\n\n\n"
 				) {
