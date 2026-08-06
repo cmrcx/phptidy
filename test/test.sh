@@ -2,6 +2,8 @@
 # run tests for phptidy
 # Usage: ./test.sh
 
+# "short_open_tag" has to be enabled for the tests.
+
 ../phptidy.php suffix
 
 passed=0
