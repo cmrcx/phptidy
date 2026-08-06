@@ -1491,7 +1491,7 @@ function mergesort(&$array, $cmp_function = 'strcmp') {
 	// Arrays of size < 2 require no action.
 	if (count($array) < 2) return;
 	// Split the array in half
-	$halfway = count($array) / 2;
+	$halfway = intval(count($array) / 2);
 	$array1 = array_slice($array, 0, $halfway);
 	$array2 = array_slice($array, $halfway);
 	// Recurse to sort the two halves
