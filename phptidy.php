@@ -1930,6 +1930,7 @@ function indent_text(&$tokens, $key, $curly_braces_count, $round_braces_count, $
 			array(T_XOR_EQUAL,   "^="),
 			// bitwise
 			"&",
+			array(T_AMPERSAND_FOLLOWED_BY_VAR_OR_VARARG, "&"),
 			"|",
 			"^",
 			array(T_SL, "<<"),
@@ -2312,7 +2313,10 @@ function collect_doctags(&$tokens) {
 				if ( $tokens[$k] === "(" ) break;
 
 				// & before function name
-				if ( $tokens[$k] === "&" ) ++$k;
+				if (
+					$tokens[$k] === "&" or
+					(isset($tokens[$k][0]) and $tokens[$k][0] === T_AMPERSAND_NOT_FOLLOWED_BY_VAR_OR_VARARG)
+				) ++$k;
 
 				if ( is_string($tokens[$k]) or $tokens[$k][0] !== T_STRING ) {
 					possible_syntax_error($tokens, $k, "No string for function name found");
@@ -2331,6 +2335,8 @@ function collect_doctags(&$tokens) {
 						if     ($tokens[$k] === "(") ++$round_braces_count;
 						elseif ($tokens[$k] === ")") --$round_braces_count;
 						elseif ($tokens[$k] === "&") $reference = true;
+					} elseif ($tokens[$k][0] === T_AMPERSAND_FOLLOWED_BY_VAR_OR_VARARG) {
+						$reference = true;
 					} else {
 						$typehint = false;
 						if (
@@ -2342,7 +2348,10 @@ function collect_doctags(&$tokens) {
 							isset($tokens[$k+1][0]) and $tokens[$k+1][0] === T_WHITESPACE
 						) {
 							$typehint = "array";
-							if ($tokens[$k+2]==="&") {
+							if (
+								$tokens[$k+2]==="&" or
+								(isset($tokens[$k+2][0]) and $tokens[$k+2][0] === T_AMPERSAND_FOLLOWED_BY_VAR_OR_VARARG)
+							) {
 								$reference = true;
 								$k++;
 								if (isset($tokens[$k+2][0]) and $tokens[$k+2][0] === T_WHITESPACE) $k++;
@@ -2357,7 +2366,10 @@ function collect_doctags(&$tokens) {
 							isset($tokens[$k+1][0]) and $tokens[$k+1][0] === T_WHITESPACE
 						) {
 							$typehint = $tokens[$k][1];
-							if ($tokens[$k+2]==="&") {
+							if (
+								$tokens[$k+2]==="&" or
+								(isset($tokens[$k+2][0]) and $tokens[$k+2][0] === T_AMPERSAND_FOLLOWED_BY_VAR_OR_VARARG)
+							) {
 								$reference = true;
 								$k++;
 								if (isset($tokens[$k+2][0]) and $tokens[$k+2][0] === T_WHITESPACE) $k++;
