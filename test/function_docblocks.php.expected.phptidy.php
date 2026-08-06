@@ -31,11 +31,8 @@ function z() {}
 function a() {}
 
 
-/* comment4 */
-
-
 /**
- *
+ * comment4
  */
 function b() {}
 

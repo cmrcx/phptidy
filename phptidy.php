@@ -2582,10 +2582,20 @@ function add_function_docblocks(&$tokens) {
 			$replace = 0;
 			while (
 				isset($tokens[$k-1]) and
-				is_array($tokens[$k-1]) and
-				$tokens[$k-1][0] === T_COMMENT
+				is_array($tokens[$k-1]) and (
+					$tokens[$k-1][0] === T_COMMENT or (
+						$tokens[$k-1][0] === T_WHITESPACE and
+						isset($tokens[$k-2]) and
+						is_array($tokens[$k-2]) and
+						$tokens[$k-2][0] === T_COMMENT
+					)
+				)
 			) {
-				$comment = " * ".trim(ltrim(trim($tokens[$k-1][1]), "/#"))."\n".$comment;
+				if ($tokens[$k-1][0] === T_WHITESPACE) {
+					--$k;
+					++$replace;
+				}
+				$comment = " * ".trim(ltrim(trim($tokens[$k-1][1]), "/#*"))."\n".$comment;
 				--$k;
 				++$replace;
 			}
